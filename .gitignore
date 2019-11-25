@@ -9,16 +9,23 @@
 dist/
 
 # Python
+__pycache__
+*.pyc
+*~
 **/__pycache__
-**/*.pyc
 **/*.pyc
 **/*~
 
 # C/C++
+*.so*
+*.dylib*
 **/*.so*
 **/*.dylib*
 
 # VIM
+*.swo
+*.swp
+.*.swp
 **/*.swp
 **/*.swo
 **/.*.swp
