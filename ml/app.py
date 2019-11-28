@@ -44,11 +44,14 @@ def init(cfg):
         logging.basicConfig(stream=sys.stdout, rank=cfg.rank, world_size=cfg.world_size)
 
     if cfg.dist:
-        dist.init_process_group(init_method=cfg.dist_url, backend=cfg.dist_backend, rank=cfg.rank, world_size=cfg.world_size)
-        logging.info(f"HOST: {dist.hostname()}")
-        for key in ['MASTER_ADDR', 'MASTER_PORT', 'WORLD_SIZE', 'CUDA_VISIBLE_DEVICES']:
-            if key in os.environ:
-                logging.info(f"{key}: {os.environ[key]}")
+        if cfg.world_size > 1:
+            dist.init_process_group(init_method=cfg.dist_url, backend=cfg.dist_backend, rank=cfg.rank, world_size=cfg.world_size)
+            logging.info(f"HOST: {dist.hostname()}")
+            for key in ['MASTER_ADDR', 'MASTER_PORT', 'WORLD_SIZE', 'CUDA_VISIBLE_DEVICES']:
+                if key in os.environ:
+                    logging.info(f"{key}: {os.environ[key]}")
+        else:
+            logging.info(f"HOST: {dist.hostname()} w/o distributed communication")
 
 
 def exec(main, cfg, *args, **kwargs):
