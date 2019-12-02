@@ -16,13 +16,17 @@ from ml import (
 import ml
 
 def init_cuda(cfg):
-    # Set CUDA Visible GPUs
-    if cfg.gpu is None:
-        if 'CUDA_VISIBLE_DEVICES' in os.environ:
+    if cfg.no_gpu:
+        # No use of GPU
+        cfg.gpu = []
+        os.environ['CUDA_VISIBLE_DEVICES'] = 'NoDevFiles'
+    elif cfg.gpu is None:
+        # Set CUDA Visible GPUs if any
+        if 'CUDA_VISIBLE_DEVICES' in os.environ and os.environ['CUDA_VISIBLE_DEVICES'] != 'NoDevFiles':
             cfg.gpu = sorted(map(int, os.environ['CUDA_VISIBLE_DEVICES'].split(',')))
         else:
             cfg.gpu = list(range(ml.cuda.device_count()))
-    os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(sorted(map(str, cfg.gpu)))
+        os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(sorted(map(str, cfg.gpu)))
 
 
 def init(cfg):
@@ -84,16 +88,24 @@ def launch(rank, main, cfg, args, kwargs):
     assert cfg.dist
     cfg.rank = rank
     if cfg.dist == 'torch':
-        # single node rank -> local GPU index
-        assert cfg.gpu
-        cfg.gpu = [cfg.gpu[rank]]
+        # NOTE launched with init_cuda()
+        if cfg.gpu:
+            # single node rank -> local GPU index
+            cfg.gpu = [cfg.gpu[rank]]
+            logging.info(f"[{rank}/{cfg.world_size}]({dist.hostname()} w/ {th.get_num_threads()} cores) CUDA_VISIBLE_DEVICES={os.environ['CUDA_VISIBLE_DEVICES']}")
+        else:
+            logging.info(f"[{rank}/{cfg.world_size}]({dist.hostname()} w/ {th.get_num_threads()} cores)")
     elif cfg.dist == 'slurm':
-        # global rank -> local visible GPU(s) instead of absolute SLURM_JOB_GPUS
+        # NOTE launched w/o CUDA initialization yet
         assert cfg.gpu is None
         assert 'CUDA_VISIBLE_DEVICES' in os.environ
-        devices = list(map(int, os.environ['CUDA_VISIBLE_DEVICES'].split(',')))
-        cfg.gpu = [devices[cfg.rank % cfg.slurm_ntasks_per_node]]
-        logging.debug(f"[{rank}/{cfg.world_size}]({dist.hostname()}/{dist.slurm_master()}) {th.get_num_threads()} cores, CUDA_VISIBLE_DEVICES={os.environ['CUDA_VISIBLE_DEVICES']}")
+        if os.environ['CUDA_VISIBLE_DEVICES'] == 'NoDevFiles':
+            logging.info(f"[{rank}/{cfg.world_size}]({dist.hostname()}/{dist.slurm_master()} w/ {th.get_num_threads()} cores)")
+        else:
+            # global rank -> local visible GPU(s) instead of absolute SLURM_JOB_GPUS
+            devices = list(map(int, os.environ['CUDA_VISIBLE_DEVICES'].split(',')))
+            cfg.gpu = [devices[cfg.rank % cfg.slurm_ntasks_per_node]]
+            logging.info(f"[{rank}/{cfg.world_size}]({dist.hostname()}/{dist.slurm_master()} w/ {th.get_num_threads()} cores) CUDA_VISIBLE_DEVICES={os.environ['CUDA_VISIBLE_DEVICES']}")
     exec(main, cfg, *args, **kwargs)
 
 

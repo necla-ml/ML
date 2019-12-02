@@ -44,6 +44,7 @@ class ArgumentParser(argparse.ArgumentParser):
         self.add_argument('-s','--seed', default='42', type=int,                                                help='Random seed')
         self.add_argument('--deterministic', action='store_true',                                               help='Deterministic training results')
         self.add_argument('--gpu', nargs='+', type=int,                                                         help='One or more visible GPU indices as CUDA_VISIBLE_DEVICES w/o comma')
+        self.add_argument('--no-gpu', action='store_true',                                                      help='Only use CPU regardless of --gpu')
 
         # Distributed
         self.add_argument('--dist', nargs='?', default=None, const='torch', choices=['torch', 'slurm'],         help='Enable distribued launch')
@@ -55,12 +56,13 @@ class ArgumentParser(argparse.ArgumentParser):
         self.add_argument('--world-size', default=-1, type=int,                                                 help='number of nodes for distributed training')
         self.add_argument('--rank', default=-1, type=int,                                                       help='Node rank for distributed training')
         
-        self.add_argument('--slurm-partition', default='gpu_scav',                                              help='Slurm job partition to submit to')
+        self.add_argument('--slurm-partition', default='gpu',                                                   help='Slurm job partition to submit to')
         self.add_argument('--slurm-nodes', default=1, type=int,                                                 help='Number of worker nodes to launch job')
-        self.add_argument('--slurm-ntasks-per-node', default=2, type=int,                                       help='Number of GPU procs to launch per node')
-        self.add_argument('--slurm-cpus-per-task', default=3, type=int,                                         help='Number of CPUs per proc')
+        self.add_argument('--slurm-ntasks-per-node', default=1, type=int,                                       help='Number of GPU procs to launch per node')
+        self.add_argument('--slurm-cpus-per-task', default=2, type=int,                                         help='Number of CPUs per proc')
         self.add_argument('--slurm-constraint', default="'GPUMODEL_TITANX|GPUMODEL_1080TI|GPUMODEL_RTX2080TI'", help='GPU model constraint w.r.t. memory capacity')
         self.add_argument('--slurm-mem', default='16G',                                                         help='Max host memory to allocate')
+        self.add_argument('--slurm-time', default='0',                                                          help='Time limit')
 
 
     def convert_arg_line_to_args(self, line):

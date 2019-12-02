@@ -52,11 +52,12 @@ def slurm_sbatch(cfg, **kwargs):
 
 #SBATCH --job-name={kwargs.get('name', script.name)}
 #SBATCH --partition={cfg.slurm_partition}
-#SBATCH --gres=gpu:{cfg.slurm_ntasks_per_node}       
+#SBATCH --gres=gpu:{0 if cfg.no_gpu else cfg.slurm_ntasks_per_node}       
 #SBATCH --ntasks-per-node={cfg.slurm_ntasks_per_node}
 #SBATCH --ntasks={ntasks}                            
 #SBATCH --cpus-per-task={cfg.slurm_cpus_per_task}
 #SBATCH --mem={cfg.slurm_mem}
+#SBATCH --time={cfg.slurm_time}
 #SBATCH --export=ALL,PYTHONPATH=.
 ##SBATCH --output=/dev/null
 #SBATCH --open-mode=append
