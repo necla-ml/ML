@@ -1,5 +1,4 @@
 import sys
-import logging
 from collections import Sequence
 
 import numpy as np
@@ -8,8 +7,6 @@ from torch import nn
 from torch.nn import functional as F
 from torch.utils.data import Dataset, DataLoader
 
-# from ml.data.dataset import *
-# from ml.data.transforms import *
 from ml.datasets import Flickr30kEntities
 from ml.vis import vis_init, vis_create
 from ml.app import (
@@ -94,7 +91,7 @@ class EntityRecall(Metric):
             )
         TPs = self._TPs / self._N
         typeTPs = self._typeTPs / (self._typeN + (self._typeN==0).float())
-        print(self._typeN.tolist())
+        logging.debug(self._typeN.tolist())
         return TPs.tolist(), typeTPs.tolist()
 
 
@@ -160,11 +157,11 @@ def create_supervised_trainer(
 def dataloader(cfg, split, bs, shuffle=False):
     """Create a data loader for the specified dataset.
     """
-    if cfg.dataset == "flickr":
+    if cfg.dataset == "Flickr30K":
         from ml.datasets.flickr import Flickr30kEntities
         ds = Flickr30kEntities(
             split,
-            path=cfg.data / "flickr",
+            path=cfg.data / "Flickr30K",
             tokenization=cfg.tok,
             max_tokens=cfg.max_tokens,
             max_entities=cfg.max_entities,
@@ -177,7 +174,7 @@ def dataloader(cfg, split, bs, shuffle=False):
     return DataLoader(ds, batch_size=bs, shuffle=shuffle, num_workers=num_workers)
 
 
-def setup_model(cfg, logger):
+def setup_model(cfg):
     if cfg.arch == "bert":
         from ml.models.bert import IBertConfig, BertForGrounding
         cfgI = IBertConfig(
@@ -195,14 +192,14 @@ def setup_model(cfg, logger):
 
     if cfg.resume:
         model.load(cfg.resume)
-        logger.info(f"{cfg.resume}")
+        logging.info(f"{cfg.resume}")
 
     from ml import nn
 
     return nn.parallelize(model, device_ids=cfg.gpu)
 
 
-def prepare_train(cfg, logger):
+def prepare_train(cfg):
     """Prepare for data, model, task
     """
 
@@ -210,12 +207,12 @@ def prepare_train(cfg, logger):
     bs0, bs1 = cfg.bs[0] // cfg.grad_acc_steps, cfg.bs[1]
     train_loader = dataloader(cfg, cfg.split[0], bs=bs0, shuffle=True)
     dev_loader = dataloader(cfg, cfg.split[1], bs=bs1, shuffle=False)
-    logger.info(
+    logging.info(
         f"Loaded train/dev datasets of size {len(train_loader)}/{len(dev_loader)}"
     )
 
     # Model, optimizer and parameters
-    model, device = setup_model(cfg, logger)
+    model, device = setup_model(cfg)
     if cfg.optim == "adam":
         no_decay = ["bias", "LayerNorm.bias", "LayerNorm.weight"]
         params = list(model.named_parameters())
@@ -246,21 +243,21 @@ def prepare_train(cfg, logger):
     else:
         raise ValueError(f"Unsupported optimizer: {cfg.optim}")
 
-    logger.info(f"Set up {cfg.model} and optimizer {cfg.optim}")
+    logging.info(f"Set up {cfg.model} and optimizer {cfg.optim}")
     return (train_loader, dev_loader), model, optim, device
 
 
-def prepare_test(cfg, logger):
+def prepare_test(cfg):
     test_loader = dataloader(cfg, cfg.split, bs=cfg.bs, shuffle=False)
-    logger.info(f"Loaded {cfg.split} dataset of size {len(test_loader)}")
+    logging.info(f"Loaded {cfg.split} dataset of size {len(test_loader)}")
 
-    model, device = setup_model(cfg, logger)
-    logger.info(f"Set up {cfg.model}")
+    model, device = setup_model(cfg)
+    logging.info(f"Set up {cfg.model}")
     return test_loader, model, device
 
 
-def train(cfg, logger, vis=None):
-    dataloaders, model, optim, device = prepare_train(cfg, logger)
+def train(cfg, logging, vis=None):
+    dataloaders, model, optim, device = prepare_train(cfg)
     trainer = create_supervised_trainer(
         model,
         bert.BCE_with_logits,
@@ -346,7 +343,7 @@ def train(cfg, logger, vis=None):
             recalls = tuple(round(100 * v, 2) for v in recall)
             typeRecalls = tuple(round(100 * v, 2) for v in typeRecall)
             throughput = 1 / batchTimer.value()
-            logger.info(
+            logging.info(
                 f"[{epoch}/{cfg.epochs}][{iteration_e}/{batches}] "
                 f"training loss={loss:.4f}, recalls={recalls}, per type={typeRecalls}, throughput={throughput:.2f} it/s"
             )
@@ -379,7 +376,7 @@ def train(cfg, logger, vis=None):
         recall, typeRecall = metrics["recall"]
         recalls = tuple(round(100 * v, 2) for v in recall)
         typeRecalls = tuple(round(100 * v, 2) for v in typeRecall)
-        logger.info(
+        logging.info(
             f"[{epoch}/{cfg.epochs}] "
             f"validation loss={loss:.4f}, recalls={recalls}, per type={typeRecalls}, time={epochTimer.value():.3f}s"
         )
@@ -424,8 +421,8 @@ def train(cfg, logger, vis=None):
     trainer.run(dataloaders[0], cfg.epochs)
 
 
-def test(cfg, logger, vis=None):
-    dataloader, model, device = prepare_test(cfg, logger)
+def test(cfg, vis=None):
+    dataloader, model, device = prepare_test(cfg)
 
     topk = [1, 5, 10]
     metrics = {
@@ -449,7 +446,7 @@ def test(cfg, logger, vis=None):
         recall, typeRecall = metrics["recall"]
         recalls = tuple(round(100 * v, 2) for v in recall)
         typeRecalls = tuple(round(100 * v, 2) for v in typeRecall)
-        logger.info(
+        logging.info(
             f"Test loss={loss:.4f}, recalls={recalls}, per type={typeRecalls}, time={epochTimer.value():.3f}s"
         )
 
@@ -458,9 +455,9 @@ def test(cfg, logger, vis=None):
 
 def run(cfg):
     # Logging
-    logger = logging.getLogger(path=cfg.save / f"{cfg.cmd}.log")
-    logger.info(f"{cfg.cmd.capitalize()} model: {cfg.model}")
-    logger.info(cfg)
+    logging.basicConfig(filename=cfg.save / f"{cfg.cmd}.log")
+    logging.info(f"{cfg.cmd.capitalize()} model: {cfg.model}")
+    logging.info(cfg)
 
     # Torch
     from ml import random
@@ -468,6 +465,6 @@ def run(cfg):
 
     if cfg.cmd == "train":
         vis = vis_init(env=f"{cfg.cmd}-{cfg.model}")
-        train(cfg, logger, vis)
+        train(cfg, logging, vis)
     elif cfg.cmd == "test":
-        test(cfg, logger)
+        test(cfg)
