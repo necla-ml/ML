@@ -403,7 +403,7 @@ class Flickr30kEntities(object):
             "cfg": "features/resnet101-faster-rcnn-vg-100-2048",
             "train": [
                 "train_flickr30k_resnet101_faster_rcnn_genome.tsv.1",
-                "train_flickr30k_resnet101_faster_rcnn_genome.tsv.1",
+                "train_flickr30k_resnet101_faster_rcnn_genome.tsv.2",
             ],
             "val": ["val_flickr30k_resnet101_faster_rcnn_genome.tsv.3"],
             "test": ["test_flickr30k_resnet101_faster_rcnn_genome.tsv.3"],
@@ -432,7 +432,7 @@ class Flickr30kEntities(object):
         h5 = path / f"{split}.hdf5"
         imgid2idx = path / f"{split}_imgid2idx.pkl"
         if not h5.exists() or not imgid2idx.exists():
-            assert False, f"{h5} and {imgid2idx} not exist"
+            logging.warning(f"{h5} or {imgid2idx} not exist, extracting features on the fly...")
             prefix = path / self.res["features"]["cfg"]
             tsvs = [prefix / tsv for tsv in self.res["features"][split]]
             logger.info(f"Extracting ROI features from {prefix}")
