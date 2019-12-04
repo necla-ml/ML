@@ -6,6 +6,7 @@ all: build
 ## PIP Package Distribution
 
 build:
+	@rm -fr dist
 	python setup.py bdist_wheel
 
 install: dist/*.whl
@@ -13,6 +14,8 @@ install: dist/*.whl
 
 uninstall: dist/*.whl
 	pip uninstall dist/*.whl -y
+
+reinstall: uninstall install
 
 clean:
 	python setup.py clean --all
