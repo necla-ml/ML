@@ -455,7 +455,6 @@ def test(cfg, vis=None):
 
 def run(cfg):
     # Logging
-    logging.basicConfig(filename=cfg.save / f"{cfg.cmd}.log")
     logging.info(f"{cfg.cmd.capitalize()} model: {cfg.model}")
     logging.info(cfg)
 
