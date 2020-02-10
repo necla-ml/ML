@@ -31,7 +31,15 @@ class H5Database(object):
             self.__dict__[key] = th.from_numpy(value) if tensorize else value
 
     def close(self):
-        self.h5.close()
+        if self.h5:
+            try:
+                self.h5.close()
+            except Exception as ImportError:
+                close_all()
+            except Exception as e:
+                close_all()
+                print(f"H5 database should have been closed before program exit: '{e}'")
+            self.h5 = None
 
     def keys(self):
         return self.__dict__.keys()
