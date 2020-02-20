@@ -7,7 +7,7 @@ from requests_toolbelt import MultipartDecoder
 from requests_toolbelt.multipart.decoder import *
 
 
-# Suppress unnecessary warnings
+# Suppress unnecessary warnings from urllib3
 class NoHeaderErrorFilter(logging.Filter):
     """Filter out urllib3 Header Parsing Errors due to a urllib3 bug."""
 
@@ -15,16 +15,17 @@ class NoHeaderErrorFilter(logging.Filter):
         """Filter out Header Parsing Errors."""
         return "Failed to parse headers" not in record.getMessage()
 
+
 def filter_urllib3_logging():
     """Filter header errors from urllib3 due to a urllib3 bug."""
     urllib3_logger = logging.getLogger("urllib3.connectionpool")
     if not any(isinstance(x, NoHeaderErrorFilter) for x in urllib3_logger.filters):
         urllib3_logger.addFilter(NoHeaderErrorFilter())
 
+
 filter_urllib3_logging()
 
 
-# Multipart streaming iterator
 class PartIterator(object):
     def __init__(self, stream, boundary, newline=b'\r\n', encoding='utf-8', bsize=96):
         self.stream = io.BufferedReader(stream)
@@ -32,7 +33,7 @@ class PartIterator(object):
         self.newline = newline
         self.encoding = encoding
         self.buf = bytearray()
-        self.bsize = 96
+        self.bsize = bsize
 
     def __next__(self):
         boundary = self.stream.read(len(self.boundary))
@@ -46,11 +47,23 @@ class PartIterator(object):
         #print(f'peek: {buf[:self.bsize]}')
         part = BodyPart(self.buf, self.encoding)
         if b'content-length' in part.headers:
-            length = int(part.headers[b'content-length'].decode(self.encoding))
-            size = length - len(part.content) + len(b'\r\n')
-            part.content += self.stream.read(size)[:-len(b'\r\n')]
-            # print(part.headers, len(part.content))
-            self.buf.clear()
+            length = int(part.headers[b'content-length'].decode(self.encoding)) # excluding newline
+            # assert length >= self.bsize, f"{length} < bsize({self.bsize})"
+            size = length - len(part.content) # + len(self.newline)
+            if size < 0: # over read
+                # print(f"[PartIterator] Over read {-size} bytes")
+                self.buf = part.content[size:]
+                part.content = part.content[:size]
+                if len(self.buf) < len(self.newline):
+                    self.stream.read(len(self.newline) - len(self.buf))
+                    self.buf.clear()
+                else:
+                    self.buf = self.buf[len(self.newline):]
+            else: # under read
+                part.content += self.stream.read(size)
+                self.stream.read(len(self.newline))
+                self.buf.clear()
+            # print('[PartIterator]', part.headers, len(part.content))
             return part
         else:
             print(f'No Content-Length in the part headers: {part.headers}')
@@ -76,8 +89,9 @@ class MultipartStreamDecoder(MultipartDecoder):
                     part != b'\r\n' and
                     part[:4] != b'--\r\n' and
                     part != b'--')
-
-        self.parts = PartIterator(content, self.boundary, newline=b'\r\n')
+        
+        # TODO Support any bsize
+        self.parts = PartIterator(content, self.boundary, newline=b'\r\n', bsize=96)
     
     def __iter__(self):
         return self.parts
