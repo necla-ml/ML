@@ -2,7 +2,7 @@ import os
 import math
 from pathlib import Path
 
-import cv2
+from cv2 import *
 import torch
 import torchvision
 import numpy as np
@@ -23,11 +23,6 @@ WHITE    = (255, 255, 255)
 FG       = GREEN
 BG       = BLACK
 
-INTER_NEAREST = cv2.INTER_NEAREST
-INTER_AREA = cv2.INTER_AREA
-INTER_LINEAR = cv2.INTER_LINEAR
-INTER_CUBIC = cv2.INTER_CUBIC
-INTER_LANCZOS4 = cv2.INTER_LANCZOS4
 
 def pts(pts):
     r"""
@@ -49,15 +44,15 @@ def save(src, path, q=95):
         src = fromTorch(src)
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    cv2.imwrite(str(path), src, [cv2.IMWRITE_JPEG_QUALITY, q])
+    imwrite(str(path), src, [IMWRITE_JPEG_QUALITY, q])
 
 def loadGrayscale(path):
-    src = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
+    src = imread(str(path), IMREAD_GRAYSCALE)
     return None if src.ndim == 0 else src
 
 def loadBGR(path):
-    #src = cv2.imread(str(path))
-    src = cv2.imread(str(path), cv2.IMREAD_COLOR | cv2.IMREAD_IGNORE_ORIENTATION)
+    #src = imread(str(path))
+    src = imread(str(path), IMREAD_COLOR | IMREAD_IGNORE_ORIENTATION)
     return None if src.ndim == 0 else src
 
 def imread(path, nc=3):
@@ -95,9 +90,9 @@ def resize(img, scale=1, width=0, height=0, interpolation=INTER_LINEAR, **kwargs
             return img.resize(size, Image.ANTIALIAS)
     else:
         if width > 0 and height > 0:
-            return cv2.resize(img, (width, height), interpolation=interpolation)
+            return resize(img, (width, height), interpolation=interpolation)
         else:
-            return cv2.resize(img, None, fx=scale, fy=scale, interpolation=interpolation)
+            return resize(img, None, fx=scale, fy=scale, interpolation=interpolation)
 
 def show(img, scale=1, title='', **kwargs):
     if type(img) is list and isTorch(img[0]):
@@ -110,38 +105,38 @@ def show(img, scale=1, title='', **kwargs):
     if isinstance(img, Image.Image):
         img.show()
     else:
-        cv2.imshow(title, img)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        imshow(title, img)
+        waitKey(0)
+        destroyAllWindows()
 
 # OpenCV only
 
 def drawLine(img, x1, y1, x2, y2):
-    cv2.line(img, (x1, y1), (x2, y2), FG, 1)
+    line(img, (x1, y1), (x2, y2), FG, 1)
 
 def drawRect(img, x, y, w, h):
-    cv2.rectangle(img, (x, y), (x+w, y+h), FG, 1)
+    rectangle(img, (x, y), (x+w, y+h), FG, 1)
 
 def drawContour(img, contour):
-    cv2.drawContours(img, [contour], 0, RED, 2)
+    drawContours(img, [contour], 0, RED, 2)
 
 def fillPoly(img, points, color=None):
-    cv2.fillPoly(img, [pts(points)], color or RED)
+    fillPoly(img, [pts(points)], color or RED)
 
 def contour(src, lo=None, hi=None):
     #print(f'[P{os.getpid()}] cvtColor()')
-    gray = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY)
+    gray = cvtColor(src, COLOR_BGR2GRAY)
     #print(f'[P{os.getpid()}] blur()')
-    blurred = cv2.blur(gray, (3, 3))
+    blurred = blur(gray, (3, 3))
     #print(f'[P{os.getpid()}] Canny()')
-    edges = cv2.Canny(blurred, lo or 90, hi or 175)
+    edges = Canny(blurred, lo or 90, hi or 175)
     
     x, y, xw, yh = (math.inf, math.inf, 0, 0)
     #print(f'[P{os.getpid()}] findContours()')
-    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2:]
+    contours, _ = findContours(edges, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE)[-2:]
     for i, cnt in enumerate(contours):
-        area = cv2.contourArea(cnt)
-        rect = cv2.boundingRect(cnt)
+        area = contourArea(cnt)
+        rect = boundingRect(cnt)
 
         #print(f'area[{i}]={area:.3f}, ({rect[0]}, {rect[1]}, {rect[2]}, {rect[3]})')
         #drawContour(src, cnt)
@@ -208,4 +203,4 @@ def boundingRect(pts):
         Args:
             pts list of points.
     """
-    return cv2.boundingRect(pts(pts))
+    return boundingRect(pts(pts))
