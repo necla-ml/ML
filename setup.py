@@ -20,7 +20,7 @@ from torch.utils.cpp_extension import CppExtension, CUDAExtension, CUDA_HOME
 MAJOR = 0
 MINOR = 1
 PATCH = 0
-SUFFIX = 'a0'
+SUFFIX = 'b0'
 
 cwd = Path(__file__).parent
 
@@ -81,7 +81,7 @@ def ext_modules(pkg):
     if not sources:
         return []
 
-    test_dir = cwd / 'test'
+    test_dir = cwd / 'tests'
     test_files = sorted(map(str, test_dir.glob('*.cpp')))
     tests = test_files
 
@@ -160,10 +160,13 @@ def readme():
 if __name__ == '__main__':
     from ml.shutil import run as sh
     pkg = sh('basename -s .git `git config --get remote.origin.url`').lower()
-    version = write_version_py(pkg, 0, 1, 0, 'a0')
+    version = write_version_py(pkg, MAJOR, MINOR, PATCH, SUFFIX)
     requirements = [
         'torch',
         'torchvision',
+#        'torchaudio',
+#        'torchtext',
+#        'transformers'
     ]
     cmdclass = dict(
         build_ext=torch.utils.cpp_extension.BuildExtension,
@@ -175,14 +178,14 @@ if __name__ == '__main__':
         name=pkg.upper(),
         version=version,
         author='Farley Lai',
-        url='https://github.com/necla-ml/sinet',
+        url='https://gitlab.com/necla-ml/ML',
         description=f"NECLA ML Library",
         long_description=readme(),
         keywords='machine learning, computer vision, natural language processing, distributed computing',
         license='BSD-3',
         classifiers=[
             'License :: OSI Approved :: BSD License',
-            'Operating System :: Ubuntu 16.04+',
+            'Operating System :: macOS/Ubuntu 16.04+',
             'Development Status :: 1 - Alpha',
             'Intended Audience :: Developers',
             'Intended Audience :: Education',

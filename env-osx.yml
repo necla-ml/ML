@@ -4,12 +4,12 @@ channels:
   - defaults
   - conda-forge
 dependencies:
-  - accimage>=0.1.1
+#  - accimage>=0.1.1
   - blosc>=1.17
   - conda                       # implicitly required by cudatoolkit-dev=10.0.*
   - conda-build
-  - cudatoolkit=10.1.*
-  - cudatoolkit-dev=10.1.*
+#  - cudatoolkit=10.1.*
+#  - cudatoolkit-dev=10.1.*
   - cython=0.29.*
   - git
   - git-lfs
@@ -17,7 +17,7 @@ dependencies:
   - ignite
   - jsonpatch                   # implicitly required by visdom
   - line_profiler>=2.1.2
-  - magma-cuda100>=2.5.1
+#  - magma-cuda100>=2.5.1
   - matplotlib>=3.1.1
   - numpy>=1.16.4
   - numpy-base>=1.16.4
@@ -43,4 +43,4 @@ dependencies:
   - transformers>=2.1.1
   - pip:
 #    - pytorch-pretrained-bert==0.6.2
-#    - transformers==2.5
+#    - transformers>=2.5

@@ -15,7 +15,6 @@ import torch.nn.functional as F
 
 from ml import logging
 from ml.utils import iou
-from ml.models import bert
 
 logger = logging.getLogger(__name__)
 csv.field_size_limit(sys.maxsize)

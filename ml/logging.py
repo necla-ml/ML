@@ -18,5 +18,4 @@ def basicConfig(**kwargs):
 
 # XXX Noisy logging from every imported module
 import numexpr
-import pytorch_pretrained_bert
 basicConfig()
