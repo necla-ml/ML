@@ -1,0 +1,74 @@
+{% set name = "ML" %}
+{% set version = "0.1.0" %}
+
+package:
+  name: "{{ name | lower }}"
+  version: "{{ version }}"
+
+source:
+  git_rev:
+  git_url: https://gitlab.com/necla-ml/ML.git
+  #url: https://pypi.io/packages/source/{{ nam::e[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
+  #sha256: 5b94b49521f6456670fdb30cd82a4eca9412788a93fa6dd6df72c94d5a8ff2d7
+
+build:
+  number: 0
+  script: "{{ PYTHON }} -m pip install . --no-deps --ignore-installed -vv "
+
+requirements:
+  host:
+    - h5py
+    - ignite
+    - numexpr
+    - pip
+    - python
+    - pytorch
+    - pyyaml
+    - pytables
+    - torchvision
+    - setuptools
+  run:
+  - accimage>=0.1.1         # [not osx]
+  - blosc>=1.17
+  - conda                   # [not osx]          # implicitly required by cudatoolkit-dev=10.0.*
+  - conda-build
+  - cudatoolkit=10.1.*      # [not osx]
+  - cudatoolkit-dev=10.1.*  # [not osx]
+  - cython=0.29.*
+  - git
+  - git-lfs
+  - h5py>=2.10.*
+  - ignite
+  - jsonpatch               # implicitly required by visdom
+  - line_profiler>=2.1.2
+  - magma-cuda100>=2.5.1    # [not osx]
+  - matplotlib>=3.1.1
+  - pandas>=0.25.1
+  - lbzip2
+  - pigz
+  - pillow>=6.1.0
+  - pip>=19.2.3
+  - pycocotools>=2.0.0
+  - pygments>=2.4.2
+  - pytables>=3.5.2
+  - pytest>=5.2.0
+  - python=3.7.*
+  - python-daemon
+  - pytorch=1.4.*
+  - pyyaml>=5.1.2
+  - requests-toolbelt           # multipart streaming over HTTP
+  - setuptools>=41.2.0
+  - six>=1.12.0
+  - scikit-learn>=0.21.3        # required by BERT
+  - torchvision
+  - visdom>=0.1.8.9
+  - transformers>=2.1.1
+test:
+  imports:
+    - ml
+
+about:
+  home: https://gitlab.com/necla-ml/ML
+  license: BSD
+  license_family: BSD
+  summary: Composable command line interface toolkit
