@@ -5,8 +5,13 @@ all: build
 
 ## conda
 
+conda-clean:
+	conda clean --all
+
 build:
+	# conda config --set anaconda_upload yes
 	conda build .
+	conda build purge
 
 publish:
 	anaconda upload -i -u NECLA-ML ~/miniconda3/conda-bld/osx-64/ml-0.1.0-py37_0.tar.bz2
