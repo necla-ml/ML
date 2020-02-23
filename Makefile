@@ -1,6 +1,8 @@
 .PHONY: clone checkout co pull 
 .PHONY: build install uninstall clean
 
+HOST:=$(shell uname -s | tr A-Z a-z)
+
 all: build
 
 ## conda
@@ -13,8 +15,11 @@ build:
 	conda build .
 	conda build purge
 
-publish:
+publish-osx:
 	anaconda upload -i -u NECLA-ML ~/miniconda3/conda-bld/osx-64/ml-0.1.0-py37_0.tar.bz2
+
+publish-linux64:
+	anaconda upload -i -u NECLA-ML ~/miniconda3/conda-bld/linux-64/ml-0.1.0-py37_0.tar.bz2
 
 ## PIP Package Distribution
 
