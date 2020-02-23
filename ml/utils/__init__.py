@@ -1,4 +1,5 @@
-from collections import Sequence, Iterable, defaultdict
+from collections.abc import Sequence, Iterable
+from collections import defaultdict
 from itertools import tee, chain
 import sys
 import pprint

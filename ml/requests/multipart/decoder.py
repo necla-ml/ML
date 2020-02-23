@@ -1,11 +1,10 @@
-import io
-import logging
-
 import requests, base64
 from requests import Request, Session
 from requests_toolbelt import MultipartDecoder
 from requests_toolbelt.multipart.decoder import *
 
+from ml.data import io
+from ml import logging
 
 # Suppress unnecessary warnings from urllib3
 class NoHeaderErrorFilter(logging.Filter):
@@ -41,7 +40,7 @@ class PartIterator(object):
         assert boundary == self.boundary, f'Unexpected boundary: {boundary}'
         self.buf += self.stream.read(self.bsize)
         if len(self.buf) < self.bsize:
-            print(f'EOS: only {len(buf)} bytes in the buffer < {self.bsize}')
+            logging.error(f'EOS: only {len(buf)} bytes in the buffer < {self.bsize}')
             raise StopIteration
 
         #print(f'peek: {buf[:self.bsize]}')
@@ -66,7 +65,7 @@ class PartIterator(object):
             # print('[PartIterator]', part.headers, len(part.content))
             return part
         else:
-            print(f'No Content-Length in the part headers: {part.headers}')
+            logging.error(f'No Content-Length in the part headers: {part.headers}')
             raise StopIteration
 
 
