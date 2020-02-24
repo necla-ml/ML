@@ -19,8 +19,8 @@ from torch.utils.cpp_extension import CppExtension, CUDAExtension, CUDA_HOME
 
 MAJOR = 0
 MINOR = 1
-PATCH = 0
-SUFFIX = 'b0'
+PATCH = 1
+SUFFIX = 'post0'
 
 cwd = Path(__file__).parent
 
