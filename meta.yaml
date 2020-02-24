@@ -29,6 +29,7 @@ requirements:
     - setuptools
   run:
   - accimage>=0.1.1         # [not osx]
+  - av
   - blosc>=1.17
   - conda                   # [not osx]          # implicitly required by cudatoolkit-dev=10.0.*
   - conda-build
@@ -45,6 +46,7 @@ requirements:
   - matplotlib>=3.1.1
   - pandas>=0.25.1
   - lbzip2
+  - opencv
   - pigz
   - pillow>=6.1.0
   - pip>=19.2.3
