@@ -14,7 +14,7 @@ conda-clean:
 build:
 	# conda config --set anaconda_upload yes
 	conda build .
-	conda build purge
+	conda build purge-all
 
 publish-osx:
 	anaconda upload -u NECLA-ML --force ~/miniconda3/conda-bld/osx-64/ml-$(VERSION)-py37_0.tar.bz2
