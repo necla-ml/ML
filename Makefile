@@ -2,6 +2,7 @@
 .PHONY: build install uninstall clean
 
 HOST:=$(shell uname -s | tr A-Z a-z)
+VERSION:=0.1.1
 
 all: build
 
@@ -16,10 +17,10 @@ build:
 	conda build purge
 
 publish-osx:
-	anaconda upload -i -u NECLA-ML ~/miniconda3/conda-bld/osx-64/ml-0.1.0-py37_0.tar.bz2
+	anaconda upload -u NECLA-ML ~/miniconda3/conda-bld/osx-64/ml-$(VERSION)-py37_0.tar.bz2
 
 publish-linux64:
-	anaconda upload -i -u NECLA-ML ~/miniconda3/conda-bld/linux-64/ml-0.1.0-py37_0.tar.bz2
+	anaconda upload -u NECLA-ML ~/miniconda3/conda-bld/linux-64/ml-$(VERSION)-py37_0.tar.bz2
 
 ## PIP Package Distribution
 
