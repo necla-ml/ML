@@ -31,10 +31,10 @@ requirements:
   - accimage>=0.1.1         # [not osx]
   - av
   - blosc>=1.17
-  - conda                   # [not osx]          # implicitly required by cudatoolkit-dev=10.0.*
+  - conda                    # [not osx]          # implicitly required by cudatoolkit-dev=10.0.*
   - conda-build
-  #- cudatoolkit=10.1.*      # [not osx]
-  #- cudatoolkit-dev=10.1.*  # [not osx]
+  - cudatoolkit=10.1.*       # [not osx]          # necessay for machines without GPUs except macOS
+  #- cudatoolkit-dev=10.1.*  # [not osx]          # separate installation required
   - cython=0.29.*
   - git
   - git-lfs
