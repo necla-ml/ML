@@ -173,7 +173,7 @@ if __name__ == '__main__':
         clean=Clean,
     )
     extensions = [ext for ext in ext_modules(pkg)]
-    packages = find_packages(exclude=('tools', 'tools.*', 'submodules'))
+    packages = find_packages(exclude=('tools', 'tools.*', 'recipe', 'submodules'))
     setup(
         name=pkg.upper(),
         version=version,
