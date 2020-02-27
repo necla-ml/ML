@@ -20,7 +20,7 @@ from torch.utils.cpp_extension import CppExtension, CUDAExtension, CUDA_HOME
 MAJOR = 0
 MINOR = 1
 PATCH = 1
-SUFFIX = 'post0'
+SUFFIX = ''
 
 cwd = Path(__file__).parent
 
@@ -198,7 +198,6 @@ if __name__ == '__main__':
             'Topic :: Software Development :: Libraries',
             'Topic :: Software Development :: Libraries :: Python Modules',
         ],
-
         packages=packages,
         # package_data={f'{pkg}.ops': ['*/*.so']},
         # setup_requires=['pytest-runner'],
