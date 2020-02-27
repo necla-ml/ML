@@ -11,8 +11,7 @@ all: build
 conda-clean:
 	conda clean --all
 
-build:
-	# conda config --set anaconda_upload yes
+conda-build:
 	conda-build purge-all
 	conda-build recipe
 
