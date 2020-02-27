@@ -42,6 +42,7 @@ clean:
 ## PIP Develop
 
 develop:
+	git checkout dev
 	pip install -e .
 
 uninstall-develop:
