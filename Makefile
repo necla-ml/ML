@@ -57,8 +57,7 @@ tag: require-version
 	git push origin tags/$(version)
 
 release:
-	git checkout master
-	git checkout $(git describe --abbrev=0 --tags)
+	git checkout tags/$(git describe --abbrev=0 --tags) -b master
 
 develop:
 	git checkout dev
