@@ -1,17 +1,22 @@
 #{% set name = "ML" %}
 #{% set version = "v0.1.4" %}
+{% set setup = load_setup_py_data(setup_file='../setup.py', from_recipe_dir=True) %}
 
 package:
-  name: "{{ load_setup_py_data().pkg }}"
-  version: "{{ load_setup_py_data().version }}"
+  name: {{ setup.name | lower }}
+  # version: "{{ setup.version }}"
+  version: {{ environ.get('GIT_DESCRIBE_TAG', '').replace('v', '') }}
 
 source:
-  git_rev: "v{{ load_setup_py_data().version }}"
+  git_rev: {{ GIT_DESCRIBE_TAG }}
+  # git_rev: "v{{ setup.version }}"
   git_url: https://gitlab.com/necla-ml/ML.git
 
 build:
-  number: 0
-  script: "{{ PYTHON }} -m pip install . --no-deps --ignore-installed -vv "
+  number: {{ GIT_DESCRIBE_NUMBER }}
+  {% if environ.get('GIT_DESCRIBE_NUMBER', '0') == '0' %}string: py{{ environ.get('PY_VER').replace('.', '') }}_0
+  {% else %}string: py{{ environ.get('PY_VER').replace('.', '') }}_{{ environ.get('GIT_BUILD_STR', 'GIT_STUB') }}{% endif %}
+  script: {{ PYTHON }} -m pip install . --no-deps --ignore-installed -vv
 
 requirements:
   host:
@@ -65,8 +70,7 @@ requirements:
   - transformers>=2.1.1
 test:
   imports:
-    - ml
-    - from ml import _C
+    - ml._C
 
 about:
   home: https://gitlab.com/necla-ml/ML
