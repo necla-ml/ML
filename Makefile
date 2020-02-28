@@ -56,6 +56,9 @@ tag: require-version
 	git tag $(version)
 	git push origin tags/$(version)
 
+release:
+	git checkout $(git describe --abbrev=0 --tags)
+
 develop:
 	git checkout dev
 	pip install -e .
