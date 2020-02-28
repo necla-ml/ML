@@ -49,6 +49,7 @@ endif
 merge:
 	git checkout master
 	git merge dev
+	git push
 
 tag: require-version
 	git checkout master
