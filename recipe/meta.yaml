@@ -1,15 +1,11 @@
-#{% set name = "ML" %}
-#{% set version = "v0.1.4" %}
 {% set setup = load_setup_py_data(setup_file='../setup.py', from_recipe_dir=True) %}
 
 package:
   name: {{ setup.name | lower }}
-  # version: "{{ setup.version }}"
   version: {{ environ.get('GIT_DESCRIBE_TAG', '').replace('v', '') }}
 
 source:
   git_rev: {{ GIT_DESCRIBE_TAG }}
-  # git_rev: "v{{ setup.version }}"
   git_url: https://gitlab.com/necla-ml/ML.git
 
 build:
