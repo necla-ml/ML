@@ -58,7 +58,7 @@ tag: require-version
 
 release:
 	git checkout master
-	git checkout $(git describe --abbrev=0)
+	git checkout $(git describe --abbrev=0 --tags)
 
 develop:
 	git checkout dev
