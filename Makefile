@@ -2,11 +2,10 @@
 .PHONY: build install uninstall clean
 
 HOST:=$(shell uname -s | tr A-Z a-z)
-VERSION:=$(shell git describe --tags | cut -c 2-)
 
 all: build
 
-## conda
+## Conda
 
 conda-clean:
 	conda clean --all
@@ -14,13 +13,18 @@ conda-clean:
 conda-build:
 	conda config --set anaconda_upload yes
 	conda-build purge-all
-	conda-build --user NECLA-ML --keep-old-work --debug recipe
+	conda-build --user NECLA-ML recipe
 
-publish-osx:
-	anaconda upload -u NECLA-ML --force ~/miniconda3/envs/$(CONDA_DEFAULT_ENV)/conda-bld/osx-64/ml-$(VERSION)-py37_0.tar.bz2
+## Local Development 
 
-publish-linux64:
-	anaconda upload -u NECLA-ML --force ~/miniconda3/envs/$(CONDA_DEFAULT_ENV)/conda-bld/linux-64/ml-$(VERSION)-py37_0.tar.bz2
+dev:
+	git checkout dev
+
+dev-setup: dev
+	pip install -e .
+
+uninstall-develop:
+	pip uninstall $$(basename -s .git `git config --get remote.origin.url`)
 
 ## PIP Package Distribution
 
@@ -40,34 +44,12 @@ clean:
 	python setup.py clean --all
 	@rm -fr dist
 
-## Local Development 
+## VCS
 
 require-version:
 ifndef version
 	$(error version is undefined)
 endif
-
-merge:
-	git checkout master
-	git merge dev
-	git push
-
-tag: require-version
-	git checkout master
-	git tag $(version)
-	git push origin tags/$(version)
-
-release:
-	git checkout $(git describe --abbrev=0 --tags)
-
-develop:
-	git checkout dev
-	pip install -e .
-
-uninstall-develop:
-	pip uninstall $$(basename -s .git `git config --get remote.origin.url`)
-
-## VCS
 
 clone:
 	git clone --recursive $(url) $(dest)
@@ -81,3 +63,16 @@ co: checkout
 pull: co
 	git submodule update --remote --merge --recursive
 	git pull
+
+merge:
+	git checkout master
+	git merge dev
+	git push
+
+tag: require-version
+	git checkout master
+	git tag $(version)
+	git push origin tags/$(version)
+
+release:
+	git checkout $(git describe --abbrev=0 --tags)
