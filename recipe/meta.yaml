@@ -1,15 +1,13 @@
-{% set name = "ML" %}
-{% set version = "0.1.1" %}
+#{% set name = "ML" %}
+#{% set version = "v0.1.4" %}
 
 package:
-  name: "{{ name | lower }}"
-  version: "{{ version }}"
+  name: "{{ load_setup_py_data().pkg }}"
+  version: "{{ load_setup_py_data().version }}"
 
 source:
-  git_rev:
+  git_rev: "v{{ load_setup_py_data().version }}"
   git_url: https://gitlab.com/necla-ml/ML.git
-  #url: https://pypi.io/packages/source/{{ nam::e[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
-  #sha256: 5b94b49521f6456670fdb30cd82a4eca9412788a93fa6dd6df72c94d5a8ff2d7
 
 build:
   number: 0
@@ -48,7 +46,7 @@ requirements:
   - lbzip2
   - opencv
   - pigz
-  - pillow>=6.1.0
+  - pillow>=7
   - pip>=19.2.3
   - pycocotools>=2.0.0
   - pygments>=2.4.2
@@ -68,6 +66,7 @@ requirements:
 test:
   imports:
     - ml
+    - from ml import _C
 
 about:
   home: https://gitlab.com/necla-ml/ML
