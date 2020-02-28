@@ -39,7 +39,25 @@ clean:
 	python setup.py clean --all
 	@rm -fr dist
 
-## PIP Develop
+## Local Development 
+
+require-version:
+ifndef version
+	$(error version is undefined)
+endif
+
+merge:
+	git checkout master
+	git merge dev
+
+tag: require-version
+	git checkout master
+	git tag $(version)
+	git push origin tags/$(version)
+
+release:
+	git checkout master
+	git checkout $(git describe --abbrev=0)
 
 develop:
 	git checkout dev
