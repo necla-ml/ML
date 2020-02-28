@@ -57,10 +57,12 @@ class Backbone(nn.Module):
                 parameter.requires_grad = False
 
     def forward(self, x):
-        outputs = self.backbone(x)
+        # torchvision>=0.5
         if 'fpn' in self.backbone._modules:
-            return outputs
+            x = self.backbone.body(x)
+            return self.backbone.fpn(x)
         else:
+            outputs = self.backbone.body(x)
             last = len(outputs) - 1
             avgpool = outputs[last]
             outputs[last] = avgpool.reshape(len(avgpool), -1)
