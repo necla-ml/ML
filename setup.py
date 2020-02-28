@@ -18,16 +18,11 @@ from torch.utils.cpp_extension import CppExtension, CUDAExtension, CUDA_HOME
 from ml.shutil import run as sh
 from ml import logging
 
-'''
-MAJOR = 0
-MINOR = 1
-PATCH = 1
-SUFFIX = ''
-'''
 
 cwd = Path(__file__).parent
 pkg = sh('basename -s .git `git config --get remote.origin.url`').lower()
 PKG = pkg.upper()
+
 
 def write_version_py(path, major=None, minor=None, patch=None, suffix='', sha='Unknown'):
     if major is None or minor is None or patch is None:
