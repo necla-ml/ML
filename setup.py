@@ -12,24 +12,28 @@ from pathlib import Path
 
 from setuptools import setup, find_packages
 from pkg_resources import get_distribution, DistributionNotFound
-
 import torch
 from torch.utils.cpp_extension import CppExtension, CUDAExtension, CUDA_HOME
 
+from ml.shutil import run as sh
+from ml import logging
 
+'''
 MAJOR = 0
 MINOR = 1
 PATCH = 1
 SUFFIX = ''
+'''
 
 cwd = Path(__file__).parent
+pkg = sh('basename -s .git `git config --get remote.origin.url`').lower()
+PKG = pkg.upper()
 
-
-def write_version_py(path, major=MAJOR, minor=MINOR, patch=PATCH, suffix=SUFFIX, sha='Unknown'):
-    try:
-        sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=cwd).decode('ascii').strip()
-    except Exception:
-        pass
+def write_version_py(path, major=None, minor=None, patch=None, suffix='', sha='Unknown'):
+    if major is None or minor is None or patch is None:
+        major, minor, patch = sh("git describe --abbrev=0 --tags")[1:].split('.')
+        sha = sh("git rev-parse HEAD")
+        logging.info(f"Build version {major}.{minor}.{patch}-{sha}")
 
     path = Path(path).resolve()
     pkg = path.name
@@ -158,9 +162,7 @@ def readme():
 
 
 if __name__ == '__main__':
-    from ml.shutil import run as sh
-    pkg = sh('basename -s .git `git config --get remote.origin.url`').lower()
-    version = write_version_py(pkg, MAJOR, MINOR, PATCH, SUFFIX)
+    version = write_version_py(pkg)
     requirements = [
         'torch',
         'torchvision',
