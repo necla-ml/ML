@@ -44,18 +44,24 @@ It is under development and subject to change and thus recommended to use this l
 
 ## Local Development
 
-To contribute to this project, one may follow the following development flow:
+To utilize GPUs and compile CUDA modules, additional GPU packages are necessary:
 
-1. Uninstall ML through `conda remove --force ml`
-2. Switch to the `dev` branch for development and testing followed by merge back to `master`
-    ```
-    make dev-setup # switch to dev branch and build the package for local installation
-    git commit ... # check in modified files
-    git push       # push to the dev branch on the repo
-    make merge
-    ```
+- `cudatoolkit` as a dependency of `pytorch` should have been installed
+- `cudatoolkit-dev` requires extra space >=16GB for installation
 
-If there are dependent submodules, `make pull` should pull updates recursively
+To contribute to this project, follow the development flow:
+
+1. Fork this repo in the beginning
+2. Uninstall ML through `conda remove --force ml`
+3. Switch to the `dev` branch for development and testing followed by merge back to `master`
+    
+    ```
+    make pull      # Pull submodules recursively
+    make dev-setup # Switch to dev branch and build the package for local installation
+    git commit ... # Check in modified files
+    git push       # Push to the dev branch on the repo
+    make merge     # Merge back to the master branch and make a pull request afterwards
+    ```
 
 ## Conda Distribution
 
