@@ -17,6 +17,9 @@ conda-build:
 
 ## Local Development 
 
+setup-mmdet:
+	cd submodules/mmdetection; pip install -e .
+
 dev:
 	git checkout dev
 
