@@ -59,7 +59,8 @@ clone:
 
 checkout:
 	git submodule update --init --recursive
-	# git submodule foreach -q --recursive 'git checkout $$(git config -f $$toplevel/.gitmodules submodule.$$name.branch || echo master)'
+	git submodule foreach -q --recursive 'git checkout $$(git config -f $$toplevel/.gitmodules submodule.$$name.branch || echo master)'
+	#cd submodules/mmdetection; git checkout v1.0.0
 
 co: checkout
 
