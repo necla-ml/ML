@@ -4,4 +4,4 @@
 [submodule "submodules/mmdetection"]
 	path = submodules/mmdetection
 	url = https://github.com/open-mmlab/mmdetection.git
-	branch = master
+	ignore = dirty
