@@ -60,12 +60,12 @@ clone:
 checkout:
 	git submodule update --init --recursive
 	git submodule foreach -q --recursive 'git checkout $$(git config -f $$toplevel/.gitmodules submodule.$$name.branch || echo master)'
-	#cd submodules/mmdetection; git checkout v1.0.0
 
 co: checkout
 
 pull: co
 	git submodule update --remote --merge --recursive
+	cd submodules/mmdetection; git checkout v1.0.0
 	git pull
 
 merge:
