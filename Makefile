@@ -71,7 +71,7 @@ merge:
 
 tag: require-version
 	git checkout master
-	git tag v$(version)
+	git tag -a v$(version) -m v$(version) 
 	git push origin tags/v$(version)
 
 release:
