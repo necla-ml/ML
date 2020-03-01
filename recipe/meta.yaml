@@ -41,7 +41,7 @@ requirements:
   - ignite
   - jsonpatch                 # implicitly required by visdom
   - line_profiler>=2.1.2
-  - magma-cuda100>=2.5.       # [not osx]
+  - magma-cuda100>=2          # [not osx]
   - matplotlib>=3.1.1
   - pandas>=0.25.1
   - lbzip2
