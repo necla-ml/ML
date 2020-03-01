@@ -27,10 +27,10 @@ requirements:
     - torchvision
     - setuptools
   run:
-  - accimage>=0.1.1          # [not osx]
+  - accimage>=0.1.1           # [not osx]
   - av
   - blosc>=1.17
-  - conda                    # [not osx]          # implicitly required by cudatoolkit-dev=10.0.*
+  - conda                     # [not osx]          # implicitly required by cudatoolkit-dev=10.0.*
   - conda-build
 #  - cudatoolkit=10.1.*       # [not osx]          # pytorch GPU dependency even on CPU machines except macOS
 #  - cudatoolkit-dev=10.1.*   # [not osx]          # separate installation for local development requiring >= 24GB tmp space
@@ -39,28 +39,29 @@ requirements:
   - git-lfs
   - h5py>=2.10.*
   - ignite
-  - jsonpatch                # implicitly required by visdom
+  - jsonpatch                 # implicitly required by visdom
   - line_profiler>=2.1.2
-  - magma-cuda100>=2.5.1    # [not osx]
+  - magma-cuda100>=2.5.       # [not osx]
   - matplotlib>=3.1.1
   - pandas>=0.25.1
   - lbzip2
   - opencv
   - pigz
-  - pillow>=7
-  - pip>=19.2.3
-  - pycocotools>=2.0.0
+  - pillow<=6.2.2             # in case of mmdet
+  - pip
+  - pycocotools>=2
   - pygments>=2.4.2
   - pytables>=3.5.2
   - pytest>=5.2.0
-  - python=3.7.*
+  - python=3.7
   - python-daemon
-  - pytorch=1.4.*
+  - pytorch=1.4
   - pyyaml>=5.1.2
   - requests-toolbelt           # multipart streaming over HTTP
-  - setuptools>=41.2.0
-  - six>=1.12.0
+  - setuptools>=41.2
+  - six>=1.12
   - scikit-learn>=0.21.3        # required by BERT
+  - tensorboard>=2.1
   - torchvision
   - visdom>=0.1.8.9
   - transformers>=2.1.1
