@@ -18,7 +18,12 @@ vcodecs: ['mjpeg', 'mpeg4', 'h264', 'libx264', 'libopenh264', 'hevc']
 def fourcc(fmt):
     if len(fmt) != 4:
         raise ValueError(f"Expected four CC but got {fmt} of {len(fmt)} CC")
-    cv.VideoWriter_fourcc(*fmt)    
+    return cv.VideoWriter_fourcc(*fmt)    
+
+
+def fourcc_str(cc):
+    cc = int(cc)
+    return "".join([chr((cc >> 8 * i) & 0xFF) for i in range(4)])
 
 
 CODECS = dict(
@@ -33,7 +38,9 @@ CODECS = dict(
     mpeg4=fourcc('MP42'),
     h264=fourcc('H264'),
     libx264=fourcc('X264'),
-    hevc=fourcc('HEVC'))
+    hevc=fourcc('HEVC'),
+    yuyv=fourcc('YUYV'),
+)
 
 
 def avcodec(fmt):
@@ -60,6 +67,8 @@ def avcodec(fmt):
         return 'pcm_alaw', CODECS['pcm_alaw']
     elif 'ulaw' in lower:
         return 'pcm_mulaw', CODECS['pcm_mulaw'] 
+    elif 'yuyv' in lower:
+        return 'yuyv', CODECS['yuyv'] 
     else:
         logging.warning(f"Unknown codec format: {fmt}")
         return None, None
