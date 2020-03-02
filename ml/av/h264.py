@@ -27,19 +27,32 @@ def NALUParser(bitstream, workaround=False):
         bitstream: a memory view that incurs zero copy
     '''
 
+    # FIXME Assume at most three NALUs for fast parsing
     pos = 0
     start = 0
+    count = 0
     start24or32 = -1
     while pos < len(bitstream):
         next24 = bitstream[pos:pos+3]
         next32 = bitstream[pos:pos+4]
         if next24 == START_CODE24:
             if start < pos:
+                if workaround and bitstream[pos - 1] == 0x00:
+                    # FIXME Three consecutive zero bytes may be rejected by e.g. KVS
+                    # - encoder forgot to set the stop bit to 1
+                    # - encoder forgot to insert an additional byte with MSB set to 1
+                    bitstream[pos - 1] = 0x01
+                    logging.warning(f"In-place mutation to work around three consecutive zeros at pos {pos - 1}")
+                count += 1
                 header = bitstream[start+start24or32]
                 yield (start, *parseNALUHeader(header)), bitstream[start:pos]
             start24or32 = 24 // 8
             start = pos
             pos += start24or32
+            header = bitstream[pos]
+            _, _, type = parseNALUHeader(header)
+            if type in [NALU_t.NIDR | NALU_t.IDR]:
+                pos = len(bitstream)
         elif next32 == START_CODE32:
             if start < pos:
                 if workaround and bitstream[pos - 1] == 0x00:
@@ -53,6 +66,10 @@ def NALUParser(bitstream, workaround=False):
             start24or32 = 32 // 8
             start = pos
             pos += start24or32
+            header = bitstream[pos]
+            _, _, type = parseNALUHeader(header)
+            if type in [NALU_t.NIDR | NALU_t.IDR]:
+                pos = len(bitstream)
         else:
             pos += 1
 
