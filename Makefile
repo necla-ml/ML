@@ -65,7 +65,7 @@ co: checkout
 
 pull: co
 	git submodule update --remote --merge --recursive
-	cd submodules/mmdetection; git checkout v1.0.0
+	cd submodules/mmdetection; git checkout v1.1.0
 	git pull
 
 merge:
