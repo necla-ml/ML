@@ -91,6 +91,9 @@ class Config(dict):
         
         return self
 
+    def clear(self):
+        return self.__dict__.clear()
+
     def load(self, path):
         path = Path(path)
         if path.suffix == '.py':
