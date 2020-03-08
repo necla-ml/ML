@@ -21,6 +21,7 @@ setup-mmdet:
 	cd submodules/mmdetection; pip install -e .
 
 dev:
+	git config --global credential.helper cache --timeout=21600
 	git checkout dev
 
 dev-setup: dev
