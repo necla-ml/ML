@@ -5,15 +5,40 @@ HOST:=$(shell uname -s | tr A-Z a-z)
 
 all: build
 
-## Conda
+## Environment
 
-conda-clean:
-	conda clean --all
+conda-install:
+	wget -O $(HOME)/Downloads/Miniconda3-latest-Linux-x86_64.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+	sh $(HOME)/Downloads/Miniconda3-latest-Linux-x86_64.sh -b -p $(HOME)/miniconda3
+	rm -fr $(HOME)/Downloads/Miniconda3-latest-Linux-x86_64.sh
+
+conda-env: $(HOME)/miniconda3
+	eval "`$(HOME)/miniconda3/bin/conda shell.bash hook`" && conda env create -n $(ENV) -f $(ENV).yml
+
+conda-setup: $(HOME)/miniconda3
+	echo '' >> $(HOME)/.bashrc
+	echo 'eval "`$$HOME/miniconda3/bin/conda shell.bash hook`"' >> $(HOME)/.bashrc
+	echo conda activate $(ENV) >> $(HOME)/.bashrc
+	echo '' >> $(HOME)/.bashrc
+	echo export EDITOR=vim >> $(HOME)/.bashrc
+	echo export PYTHONDONTWRITEBYTECODE=1 >> $(HOME)/.bashrc
+
+conda: conda-install conda-env conda-setup
+	eval `$(HOME)/miniconda3/bin/conda shell.bash hook` && conda env list
+	echo Restart your shell to create and activate conda environment "$(ENV)"
+
+## Conda Distribution
+
+conda-index:
+	conda index /zdata/projects/shared/conda/geteigen
 
 conda-build:
 	conda config --set anaconda_upload yes
 	conda-build purge-all
 	conda-build --user NECLA-ML recipe
+
+conda-clean:
+	conda clean --all
 
 ## Local Development 
 
