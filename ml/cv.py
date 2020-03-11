@@ -2,12 +2,13 @@ import os
 import math
 from pathlib import Path
 
-from cv2 import *
 import torch
 import torchvision
 import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
+from cv2 import *
+import cv2
 
 torchvision.set_image_backend('accimage')
 
@@ -22,7 +23,6 @@ YELLOW   = (  0, 255, 255)
 WHITE    = (255, 255, 255)
 FG       = GREEN
 BG       = BLACK
-
 
 def pts(pts):
     r"""
@@ -79,20 +79,24 @@ def toTorch(src, device='cpu'):
     return t
 
 def resize(img, scale=1, width=0, height=0, interpolation=INTER_LINEAR, **kwargs):
-    if isTorch(img):
-        img = fromTorch(img)
-
+    '''Resize input image of PIL/accimage or OpenCV BGR and convert torch tensor image if necessary
+    '''
     if isinstance(img, Image.Image):
+        # PIL image
         if width > 0 and height > 0:
             return img.resize((width, height), Image.ANTIALIAS)
         else:
             size = [int(s * scale) for s in img.size]
             return img.resize(size, Image.ANTIALIAS)
     else:
+        if isTorch(img):
+            img = fromTorch(img)
+
+        # OpenCV BGR image
         if width > 0 and height > 0:
-            return resize(img, (width, height), interpolation=interpolation)
+            return cv2.resize(img, (width, height), interpolation=interpolation)
         else:
-            return resize(img, None, fx=scale, fy=scale, interpolation=interpolation)
+            return cv2.resize(img, None, fx=scale, fy=scale, interpolation=interpolation)
 
 def show(img, scale=1, title='', **kwargs):
     if type(img) is list and isTorch(img[0]):
