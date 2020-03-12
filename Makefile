@@ -48,6 +48,7 @@ setup-mmdet:
 dev:
 	git config --global credential.helper cache --timeout=21600
 	git checkout dev
+	make co
 
 dev-setup: dev
 	pip install -e .
@@ -87,7 +88,7 @@ checkout:
 	#git submodule update --init --recursive
 	#git submodule foreach -q --recursive 'git checkout $$(git config -f $$toplevel/.gitmodules submodule.$$name.branch || echo master)'
 	cd submodules/mmdetection; git clean -fd; git $@ -f v1.1.0
-	export branch=$$(git symbolic-ref --short HEAD); cd submodules/ML; git $@ $$branch
+	export branch=$$(git symbolic-ref --short HEAD); git $@ $$branch
 
 co: checkout
 
