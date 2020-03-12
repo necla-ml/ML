@@ -85,7 +85,7 @@ clone:
 	git clone --recursive $(url) $(dest)
 
 checkout:
-	#git submodule update --init --recursive
+	git submodule update --init --recursive
 	#git submodule foreach -q --recursive 'git checkout $$(git config -f $$toplevel/.gitmodules submodule.$$name.branch || echo master)'
 	cd submodules/mmdetection; git clean -fd; git $@ -f v1.1.0
 	export branch=$$(git symbolic-ref --short HEAD); git $@ $$branch
