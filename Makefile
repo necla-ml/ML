@@ -84,14 +84,15 @@ clone:
 	git clone --recursive $(url) $(dest)
 
 checkout:
-	git submodule update --init --recursive
-	git submodule foreach -q --recursive 'git checkout $$(git config -f $$toplevel/.gitmodules submodule.$$name.branch || echo master)'
+	#git submodule update --init --recursive
+	#git submodule foreach -q --recursive 'git checkout $$(git config -f $$toplevel/.gitmodules submodule.$$name.branch || echo master)'
+	cd submodules/mmdetection; git clean -fd; git $@ -f v1.1.0
+	export branch=$$(git symbolic-ref --short HEAD); cd submodules/ML; git $@ $$branch
 
 co: checkout
 
 pull: co
-	git submodule update --remote --merge --recursive
-	cd submodules/mmdetection; git checkout v1.1.0
+	# git submodule update --remote --merge --recursive
 	git pull
 
 merge:
