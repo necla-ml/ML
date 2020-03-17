@@ -60,7 +60,9 @@ class ArgumentParser(argparse.ArgumentParser):
         self.add_argument('--slurm-nodes', default=1, type=int,                                                 help='Number of worker nodes to launch job')
         self.add_argument('--slurm-ntasks-per-node', default=1, type=int,                                       help='Number of GPU procs to launch per node')
         self.add_argument('--slurm-cpus-per-task', default=2, type=int,                                         help='Number of CPUs per proc')
-        self.add_argument('--slurm-constraint', default="'GPUMODEL_TITANX|GPUMODEL_1080TI|GPUMODEL_RTX2080TI'", help='GPU model constraint w.r.t. memory capacity')
+        self.add_argument('--slurm-constraint', choices=['GPUMODEL_TITANX', 
+                                                         'GPUMODEL_1080TI', 
+                                                         'GPUMODEL_RTX2080TI'],                                 help='GPU model constraint w.r.t. memory capacity')
         self.add_argument('--slurm-mem', default='16G',                                                         help='Max host memory to allocate')
         self.add_argument('--slurm-time', default='0',                                                          help='Time limit')
 

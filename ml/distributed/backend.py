@@ -61,7 +61,7 @@ def slurm_sbatch(cfg, **kwargs):
 #SBATCH --export=ALL,PYTHONPATH=.
 ##SBATCH --output=/dev/null
 #SBATCH --open-mode=append
-#SBATCH -C {cfg.slurm_constraint}
+{cfg.slurm_constraint and f'#SBATCH -C {cfg.slurm_constraint}' or ''}
 
 {cmd}"""
 
