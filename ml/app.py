@@ -20,12 +20,13 @@ def init_cuda(cfg):
         # No use of GPU
         cfg.gpu = []
         os.environ['CUDA_VISIBLE_DEVICES'] = 'NoDevFiles'
-    elif cfg.gpu is None:
-        # Set CUDA Visible GPUs if any
-        if 'CUDA_VISIBLE_DEVICES' in os.environ and os.environ['CUDA_VISIBLE_DEVICES'] != 'NoDevFiles':
-            cfg.gpu = sorted(map(int, os.environ['CUDA_VISIBLE_DEVICES'].split(',')))
-        else:
-            cfg.gpu = list(range(ml.cuda.device_count()))
+    else:
+        if cfg.gpu is None:
+            # Set CUDA Visible GPUs if any
+            if 'CUDA_VISIBLE_DEVICES' in os.environ and os.environ['CUDA_VISIBLE_DEVICES'] != 'NoDevFiles':
+                cfg.gpu = sorted(map(int, os.environ['CUDA_VISIBLE_DEVICES'].split(',')))
+            else:
+                cfg.gpu = list(range(ml.cuda.device_count()))
         os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(sorted(map(str, cfg.gpu)))
 
 
