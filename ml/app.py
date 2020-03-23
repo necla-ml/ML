@@ -28,6 +28,7 @@ def init_cuda(cfg):
             else:
                 cfg.gpu = list(range(ml.cuda.device_count()))
         os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(sorted(map(str, cfg.gpu)))
+        
 
 
 def init(cfg):
