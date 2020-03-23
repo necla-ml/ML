@@ -1,5 +1,7 @@
-from torch import nn
+from torch.nn.modules.batchnorm import *
+# from torch import nn
 
+'''
 class SyncBatchNorm(nn.SyncBatchNorm):
     def _check_input_dim(self, input):
         if self._1d:
@@ -52,3 +54,4 @@ class SyncBatchNorm(nn.SyncBatchNorm):
             module_output.add_module(name, cls.convert_sync_batchnorm(child, process_group))
         del module
         return module_output
+'''
