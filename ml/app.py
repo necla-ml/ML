@@ -52,10 +52,10 @@ def init(cfg):
     if cfg.dist:
         if cfg.world_size > 1:
             dist.init_process_group(init_method=cfg.dist_url, backend=cfg.dist_backend, rank=cfg.rank, world_size=cfg.world_size)
-            logging.info(f"HOST: {dist.hostname()}")
+            logging.info(f"[{cfg.rank}/{cfg.world_size}] HOST: {dist.hostname()}")
             for key in ['MASTER_ADDR', 'MASTER_PORT', 'WORLD_SIZE', 'CUDA_VISIBLE_DEVICES']:
                 if key in os.environ:
-                    logging.info(f"{key}: {os.environ[key]}")
+                    logging.info(f"[{cfg.rank}/{cfg.world_size}] {key}: {os.environ[key]}")
         else:
             logging.info(f"HOST: {dist.hostname()} w/o distributed communication")
 
@@ -94,9 +94,9 @@ def launch(rank, main, cfg, args, kwargs):
         if cfg.gpu:
             # single node rank -> local GPU index
             cfg.gpu = [cfg.gpu[rank]]
-            logging.info(f"[{rank}/{cfg.world_size}]({dist.hostname()} w/ {th.get_num_threads()} cores) CUDA_VISIBLE_DEVICES={os.environ['CUDA_VISIBLE_DEVICES']}")
+            logging.info(f"[{rank}/{cfg.world_size}]({dist.hostname()}) {th.get_num_threads()} cores) w/ CUDA_VISIBLE_DEVICES={os.environ['CUDA_VISIBLE_DEVICES']}")
         else:
-            logging.info(f"[{rank}/{cfg.world_size}]({dist.hostname()} w/ {th.get_num_threads()} cores)")
+            logging.info(f"[{rank}/{cfg.world_size}]({dist.hostname()}) {th.get_num_threads()} cores)")
     elif cfg.dist == 'slurm':
         # NOTE launched w/o CUDA initialization yet
         assert cfg.gpu is None
