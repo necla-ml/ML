@@ -7,7 +7,7 @@ from ml import logging
 
 @pytest.fixture
 def shoplifting():
-    return "retrieving_items+ -> walking_items* -> concealing_items+"
+    return "retrieving_items>=2 -> (walking | walking_items)* -> concealing_items>=2"
 
 @pytest.fixture
 def falling():
@@ -36,9 +36,9 @@ def test_shoplifting(shoplifting):
 
     for _ in range(10):
         precursor = [labels[rrange(0, len(labels))] for i in range(4)]
-        retrieving_items = ['retrieving_items'] * rrange(1, 3)
-        walking_items = ['walking_items'] * rrange(0, 2)
-        concealing_items = ['concealing_items'] * rrange(1, 3)
+        retrieving_items = ['retrieving_items'] * rrange(2, 5)
+        walking_items = ['walking_items'] * rrange(0, 1) + ['walking'] * rrange(0, 1)
+        concealing_items = ['concealing_items'] * rrange(2, 5)
         postcursor = [labels[rrange(0, len(labels))] for i in range(4)]
         input = precursor + retrieving_items + walking_items + concealing_items + postcursor
         encoded = engine.encode(*input)
