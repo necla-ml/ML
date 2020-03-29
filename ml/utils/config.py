@@ -1,14 +1,45 @@
+from collections.abc import Mapping
+from importlib import import_module
+from pathlib import Path
+from typing import Any, IO
 import re
+import os
 import sys
 import pprint
-from pathlib import Path
-from importlib import import_module
 
+import yaml
 try:
-    import yaml
-    from yaml import CLoader as Loader, CDumper as Dumper
+    from yaml import CLoader as YAMLLoader, CDumper as Dumper
 except ImportError:
-    from yaml import Loader, Dumper
+    from yaml import YAMLLoader, Dumper
+
+class Loader(YAMLLoader):
+    """YAML Loader with `!include` constructor."""
+
+    def __init__(self, stream: IO) -> None:
+        """Initialise Loader."""
+
+        try:
+            self._root = os.path.split(stream.name)[0]
+        except AttributeError:
+            self._root = os.path.curdir
+
+        super().__init__(stream)
+
+def _include(loader: Loader, node: yaml.Node) -> Any:
+    """Include file referenced at node."""
+
+    filename = os.path.abspath(os.path.join(loader._root, loader.construct_scalar(node)))
+    extension = os.path.splitext(filename)[1].lstrip('.')
+    with open(filename, 'r') as f:
+        if extension in ('yaml', 'yml'):
+            return yaml.load(f, Loader)
+        elif extension in ('json', ):
+            return json.load(f)
+        else:
+            return ''.join(f.readlines())
+
+yaml.add_constructor('!include', _include, Loader)
 
 # XXX Accept scientific notation without decimal point in case of YAML 1.1
 Loader.add_implicit_resolver(
@@ -24,7 +55,6 @@ Loader.add_implicit_resolver(
 
 class Config(dict):
     def __init__(self, args=None, **kwargs):
-        # access to keys as to attribues
         super(Config, self).__init__()
         if args is None:
             args = {}
@@ -51,6 +81,9 @@ class Config(dict):
  
     def __setitem__(self, key, value):
         self.__dict__[key] = value
+
+    def __delitem__(self, key):
+        del self.__dict__[key]
 
     def __iter__(self):
         return iter(self.keys())
@@ -84,11 +117,10 @@ class Config(dict):
 
     def update(self, other=None):
         for key, value in other.items():
-            if isinstance(value, dict):
-                self[key] = Config(value)
+            if isinstance(value, Mapping):
+                self[key] = self.get(key, Config()).update(value)
             else:
                 self[key] = value
-        
         return self
 
     def clear(self):
@@ -113,8 +145,22 @@ class Config(dict):
                 self.update(yaml.load(f, Loader=Loader))
         else:
             raise ValueError(f'Unsupported config file format: {path.suffix}')
-            
 
+        # XXX workaround to merge with defaults
+        if 'import' in self:
+            imports = self['import']
+            for k, v in imports.items():
+                if k in self:
+                    v.update(self[k])
+                if k != 'defaults':
+                    self[k] = v
+            # Defaults on top level
+            if 'defaults' in imports:
+                del self['import']
+                cfg = imports.defaults
+                cfg.update(self)
+                self.clear()
+                self.update(cfg)    
         return self
 
     def dump(self):
