@@ -170,6 +170,7 @@ if __name__ == '__main__':
         clean=Clean,
     )
     extensions = [ext for ext in ext_modules(pkg)]
+    namespaces = ['ml']
     # packages = find_packages(exclude=('tools', 'tools.*', 'recipe', 'submodules'))
     packages = find_namespace_packages(include=['ml.*'], exclude=('ml.csrc', 'ml.csrc.*'))
     setup(
@@ -196,8 +197,8 @@ if __name__ == '__main__':
             'Topic :: Software Development :: Libraries',
             'Topic :: Software Development :: Libraries :: Python Modules',
         ],
-        packages=packages,
-        # package_data={f'{pkg}.ops': ['*/*.so']},
+        namespace_packages=namespaces,
+        packages=namespaces + packages,
         # setup_requires=['pytest-runner'],
         # tests_require=['pytest'],
         install_requires=requirements,
