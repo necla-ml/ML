@@ -68,7 +68,10 @@ requirements:
   - transformers>=2.1.1
 test:
   imports:
-    - ml._C
+    - ml.cv
+    - ml.ops
+  commands:
+    - {{ python }} -c 'import torch; import ml._C'  
 
 about:
   home: https://gitlab.com/necla-ml/ML
