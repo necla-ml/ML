@@ -10,7 +10,7 @@ import subprocess
 import distutils.command.clean
 from pathlib import Path
 
-from setuptools import setup, find_packages
+from setuptools import setup, find_packages, find_namespace_packages
 from pkg_resources import get_distribution, DistributionNotFound
 import torch
 from torch.utils.cpp_extension import CppExtension, CUDAExtension, CUDA_HOME
@@ -170,7 +170,8 @@ if __name__ == '__main__':
         clean=Clean,
     )
     extensions = [ext for ext in ext_modules(pkg)]
-    packages = find_packages(exclude=('tools', 'tools.*', 'recipe', 'submodules'))
+    # packages = find_packages(exclude=('tools', 'tools.*', 'recipe', 'submodules'))
+    packages = find_namespace_packages(include=['ml.*'], exclude=('ml.csrc', 'ml.csrc.*'))
     setup(
         name=pkg.upper(),
         version=version,
