@@ -3,8 +3,7 @@ from requests import Request, Session
 from requests_toolbelt import MultipartDecoder
 from requests_toolbelt.multipart.decoder import *
 
-from ml.data import io
-from ml import logging
+from ml import io, logging
 
 # Suppress unnecessary warnings from urllib3
 class NoHeaderErrorFilter(logging.Filter):
