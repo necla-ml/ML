@@ -9,6 +9,7 @@ from numpy import format_float_positional as strf
 from .config import *
 from .grad import *
 from .functions import *
+from .psutil import *
 
 pprint = pprint.PrettyPrinter(indent=4, width=120).pprint
 

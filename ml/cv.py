@@ -2,15 +2,18 @@ import os
 import math
 from pathlib import Path
 
-import torch
-import torchvision
 import numpy as np
-import matplotlib.pyplot as plt
+
 from PIL import Image
 from cv2 import *
 import cv2
 
-torchvision.set_image_backend('accimage')
+try:
+    import torchvision as tv
+except ImportError as e:
+    pass
+else:
+    tv.set_image_backend('accimage')
 
 ## Essential OpenCV
 
@@ -37,6 +40,7 @@ def pts(pts):
 
 
 def isTorch(img):
+    import torch
     return torch.is_tensor(img) and img.ndimension() == 3
 
 def save(src, path, q=95):
@@ -72,6 +76,7 @@ def fromTorch(src):
         return src[:,:,::-1] if src.ndim == 3 else np.squeeze(src)
 
 def toTorch(src, device='cpu'):
+    import torch
     # BGR2RGB, permute
     src = src[:,:,::-1] if src.ndim == 3 else src
     src = src.transpose(2, 0, 1).astype(np.float32)
@@ -99,6 +104,7 @@ def resize(img, scale=1, width=0, height=0, interpolation=INTER_LINEAR, **kwargs
             return cv2.resize(img, None, fx=scale, fy=scale, interpolation=interpolation)
 
 def show(img, scale=1, title='', **kwargs):
+    import torch
     if type(img) is list and isTorch(img[0]):
         img = torch.cat(img, 2)
 

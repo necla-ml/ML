@@ -1,8 +1,9 @@
-import torch
-import torch.nn.functional as F
-from torch.autograd import Variable
-import numpy as np
 from math import exp
+
+import torch
+from torch.nn.functional import *
+
+import numpy as np
 
 r"""
     https://github.com/Po-Hsun-Su/pytorch-ssim

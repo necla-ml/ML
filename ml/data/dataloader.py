@@ -1,3 +1,8 @@
+r"""
+Enhancement:
+- Able to load a slice of dataset
+"""
+
 import re
 import os
 import sys
@@ -10,13 +15,8 @@ import torch
 import torch.multiprocessing as mp
 from torch.utils.data.sampler import SequentialSampler, RandomSampler, BatchSampler
 
-from ml._six import string_classes
+from six import string_classes
 from ml.data.dataset import SliceDataset
-
-if sys.version_info[0] == 2:
-    import Queue as queue
-else:
-    import queue
 
 _use_shared_memory = False
 

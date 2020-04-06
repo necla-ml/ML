@@ -49,6 +49,7 @@ requirements:
   - pigz
   - pillow<=6.2.2             # in case of mmdet
   - pip
+  - psutil                    # number of physical cores
   - pycocotools>=2
   - pygments>=2.4.2
   - pytables>=3.5.2

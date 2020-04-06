@@ -2,11 +2,6 @@ import pickle
 from io import *
 from pathlib import Path
 
-import h5py
-import tables
-import torch as th
-import numpy as np
-
 COMP_LIBS=[
     'zlib',
     'lzo',
@@ -27,6 +22,7 @@ class H5Database(object):
             import pickle
             self.meta = pickle.loads(h5.attrs['meta'])
 
+        import torch as th
         for key in h5.keys():
             value = h5[key][:]
             self.__dict__[key] = th.from_numpy(value) if tensorize else value
@@ -65,6 +61,8 @@ def save(data, path, meta=None, complevel=6, complib='blosc:zstd', bitshuffle=Tr
     path = Path(path)
     if path.suffix in ['.h5', '.hd5']:
         # TODO arbitrary levels
+        import tables
+        import torch as th
         database = tables.open_file(str(path), mode='w')
         filters = tables.Filters(complevel=complevel, complib=complib, bitshuffle=bitshuffle, **kwargs)
         for name, d in data.items():
@@ -74,6 +72,7 @@ def save(data, path, meta=None, complevel=6, complib='blosc:zstd', bitshuffle=Tr
         database.root._v_attrs.meta = meta
         database.close()
     elif path.suffix in ['.pt', '.pth']:
+        import torch as th
         th.save(data, path)
     elif path.suffix in ['.pkl']:
         with open(path, 'wb') as pkl:
@@ -88,10 +87,13 @@ def load(path, **kwargs):
     path = Path(path)
     if path.suffix in ['.h5', '.hd5', '.hdf5']:
         if True:
+            import h5py
             return H5Database(h5py.File(path, mode))
         else:
+            import tables
             return tables.open_file(path, mode=mode, **kwargs)
     elif path.suffix in ['.pt', '.pth']:
+        import torch as th
         return th.load(path)
     elif path.suffix in ['.pkl']:
         with open(path, mode if 'b' in mode else f"b{mode}") as pkl:

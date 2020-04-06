@@ -9,7 +9,7 @@ from torch.utils.data import Dataset, DataLoader
 
 from ml.datasets import Flickr30kEntities
 from ml.vis import vis_init, vis_create
-from ml.app import (
+from .. import (
     convert_tensor,
     create_supervised_evaluator,
     Events,
@@ -20,9 +20,9 @@ from ml.app import (
     TerminateOnNan,
     Timer,
     NotComputableError,
+    Metric,
 )
 from ml.models import bert
-from ml.metrics import Metric
 from ml.utils import *
 from ml import logging
 import ml

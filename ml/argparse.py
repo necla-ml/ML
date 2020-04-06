@@ -4,7 +4,6 @@ import re
 from .utils.config import Config
 from ml import logging
 
-
 class ConfigAction(argparse.Action):
     def __inint__(self, opt, dest, help='specify an external config to load options', **kwargs):
         super(ConfigAction, self).__init__(opt, 'cfg', help=help, **kwargs)
@@ -23,7 +22,6 @@ class ConfigAction(argparse.Action):
                 args.__dict__[k] = v
 
         return
-
 
 class ArgumentParser(argparse.ArgumentParser):
     r"""Allow no '=' in an argument config as a regular command line
@@ -65,7 +63,6 @@ class ArgumentParser(argparse.ArgumentParser):
                                                          'GPUMODEL_RTX2080TI'],                                 help='GPU model constraint w.r.t. memory capacity')
         self.add_argument('--slurm-mem', default='16G',                                                         help='Max host memory to allocate')
         self.add_argument('--slurm-time', default='0',                                                          help='Time limit')
-
 
     def convert_arg_line_to_args(self, line):
         tokens = line.strip().split()

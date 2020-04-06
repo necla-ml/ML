@@ -1,2 +1,2 @@
 from .av import *
-from . import codec
+from .h264 import *

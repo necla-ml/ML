@@ -3,7 +3,6 @@ import torch as th
 
 from ml import logging
 
-
 class DataParallel(nn.DataParallel):
     def __init__(self, module, device_ids=None, output_device=None, dim=0):
         super(DataParallel, self).__init__(module, device_ids, output_device, dim)

@@ -28,4 +28,5 @@ def device_count():
         return len(os.environ[key].split(','))
     else:
         import subprocess
-        return int(subprocess.getoutput("python -c 'import torch as th; print(th.cuda.device_count())'"))
+        output = subprocess.getoutput("python -c 'import torch as th; print(th.cuda.device_count())'")
+        return int(output) if output.isnumeric() else 0

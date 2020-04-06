@@ -2,16 +2,11 @@ import os
 import sys
 import subprocess
 
-from torch import distributed as dist
-import torch
-
 from ml import logging
-
 
 def hostname():
     import socket
     return os.environ.get('SLURMD_NODENAME', socket.gethostname())
-
 
 def slurm_master(nodes=None):
     #nodes = nodes or os.environ.get('SLURM_NODELIST', None)
@@ -19,7 +14,6 @@ def slurm_master(nodes=None):
     exitcode, master = subprocess.getstatusoutput(f"scontrol show hostname {nodes} | head -n{1}")
     assert exitcode == 0, f"Failed to find master out of {nodes}"
     return master
-
 
 def slurm_sbatch(cfg, **kwargs):
     from __main__ import __file__ as script
@@ -75,7 +69,6 @@ def slurm_sbatch(cfg, **kwargs):
         out, err = sbatch.communicate()
         logging.error(f"Timeout to submit the job: {out}, {err}")
 
-
 def slurm_init(cfg, **kwargs):
     os.environ['MASTER_ADDR'] = slurm_master()
     os.environ['MASTER_PORT'] = str(cfg.dist_port)
@@ -83,7 +76,6 @@ def slurm_init(cfg, **kwargs):
     os.environ['RANK'] = os.environ['SLURM_PROCID']
     cfg.world_size = int(os.environ['WORLD_SIZE'])
     cfg.rank = int(os.environ['RANK'])
-
 
 def mpi_init(backend, **kwargs):
     raise NotImplementedError

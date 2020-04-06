@@ -1,11 +1,13 @@
 from enum import IntEnum
 from ml import logging
 
+__all__ = [
+    'H264Framer',
+]
 
 THREE_ZEROS = bytes.fromhex('000000')       # Should be replaced with 000003 by encoder
 START_CODE24 = bytes.fromhex('000001')
 START_CODE32 = bytes.fromhex('00000001')
-
 
 class NALU_t(IntEnum):
     NIDR = 1 
@@ -13,13 +15,11 @@ class NALU_t(IntEnum):
     SPS = 7
     PPS = 8
 
-
 def parseNALUHeader(header):
     forbidden = (header & 0x80) >> 7
     ref_idc = (header & 0x60) >> 5
     type = (header & 0x1F)
     return forbidden, ref_idc, type
-
 
 def NALUParser(bitstream, workaround=False):
     '''
@@ -76,7 +76,6 @@ def NALUParser(bitstream, workaround=False):
     if start < pos:
         header = bitstream[start+start24or32]
         yield (start, *parseNALUHeader(header)), bitstream[start:pos]
-
 
 class H264Framer(object):
     def __init__(self, bitstream, workaround=False):

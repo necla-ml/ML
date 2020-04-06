@@ -2,16 +2,14 @@ from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from pathlib import Path
 
-from torch import nn
-import torch as th
-from torchvision.models.detection import maskrcnn_resnet50_fpn
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor, AnchorGenerator, TwoMLPHead
+from torchvision.models.detection import maskrcnn_resnet50_fpn
 from torchvision.models.detection import MaskRCNN
 from torchvision.ops import MultiScaleRoIAlign
+import torch as th
 
-from ml.models import backbone
-
-from ml import logging
+from .... import nn, logging
+from .. import backbone
 
 def mask_rcnn(pretrained=False, num_classes=1+90, representation=1024, backbone=None, with_mask=True, **kwargs):
     if backbone is None:
@@ -38,7 +36,6 @@ def mask_rcnn(pretrained=False, num_classes=1+90, representation=1024, backbone=
         model.roi_heads.mask_predictor = None
     
     return THDetector(model)
-
 
 def mmdet_load(cfg, chkpt=None, with_mask=False, **kwargs):
     r"""Load an mmdet detection model from cfg and checkpoint.
@@ -72,7 +69,6 @@ def mmdet_load(cfg, chkpt=None, with_mask=False, **kwargs):
         model.semantic_head = None
 
     return MMDetector(model)
-
 
 class Detector(nn.Module):
     #__metaclass__ = ABCMeta

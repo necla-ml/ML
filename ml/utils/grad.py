@@ -1,6 +1,5 @@
-import torch
-
 def norm(params, p=2):
+    import torch
     if isinstance(params, torch.Tensor):
         params = [params]
     

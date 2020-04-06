@@ -2,18 +2,12 @@ import os, sys
 import subprocess
 from pathlib import Path
 
-from ignite import *
-from ignite.engine import Engine, State, Events, create_supervised_trainer, create_supervised_evaluator
-from ignite.handlers import ModelCheckpoint, EarlyStopping, TerminateOnNan, Timer
-from ignite.utils   import convert_tensor, to_onehot
-from ignite.exceptions import *
-import torch as th
-
-from ml import (
-    logging, 
-    multiprocessing as mp,
-    distributed as dist)
 import ml
+from ml import (
+    distributed as dist,
+    multiprocessing as mp,
+    utils,
+    logging,)
 
 def init_cuda(cfg):
     if cfg.no_gpu:
@@ -30,13 +24,12 @@ def init_cuda(cfg):
         os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(sorted(map(str, cfg.gpu)))
         
 
-
 def init(cfg):
     init_cuda(cfg)
     ml.random.seed(cfg.seed, deterministic=cfg.deterministic)
     if (cfg.logging or cfg.daemon) and cfg.logfile is None:
-        cfg.logging = True
         from __main__ import __file__ as script
+        cfg.logging = True
         name = Path(script).stem
         if cfg.rank < 0:
             cfg.logfile = f"{name}-{os.getpid()}.log"
@@ -94,20 +87,20 @@ def launch(rank, main, cfg, args, kwargs):
         if cfg.gpu:
             # single node rank -> local GPU index
             cfg.gpu = [cfg.gpu[rank]]
-            logging.info(f"[{rank}/{cfg.world_size}]({dist.hostname()}) {th.get_num_threads()} cores) w/ CUDA_VISIBLE_DEVICES={os.environ['CUDA_VISIBLE_DEVICES']}")
+            logging.info(f"[{rank}/{cfg.world_size}]({dist.hostname()}) {utils.get_num_threads()} cores) w/ CUDA_VISIBLE_DEVICES={os.environ['CUDA_VISIBLE_DEVICES']}")
         else:
-            logging.info(f"[{rank}/{cfg.world_size}]({dist.hostname()}) {th.get_num_threads()} cores)")
+            logging.info(f"[{rank}/{cfg.world_size}]({dist.hostname()}) {utils.get_num_threads()} cores)")
     elif cfg.dist == 'slurm':
         # NOTE launched w/o CUDA initialization yet
         assert cfg.gpu is None
         assert 'CUDA_VISIBLE_DEVICES' in os.environ
         if os.environ['CUDA_VISIBLE_DEVICES'] == 'NoDevFiles':
-            logging.info(f"[{rank}/{cfg.world_size}]({dist.hostname()}/{dist.slurm_master()} w/ {th.get_num_threads()} cores)")
+            logging.info(f"[{rank}/{cfg.world_size}]({dist.hostname()}/{dist.slurm_master()} w/ {utils.get_num_threads()} cores)")
         else:
             # global rank -> local visible GPU(s) instead of absolute SLURM_JOB_GPUS
             devices = list(map(int, os.environ['CUDA_VISIBLE_DEVICES'].split(',')))
             cfg.gpu = [devices[cfg.rank % cfg.slurm_ntasks_per_node]]
-            logging.info(f"[{rank}/{cfg.world_size}]({dist.hostname()}/{dist.slurm_master()} w/ {th.get_num_threads()} cores) CUDA_VISIBLE_DEVICES={os.environ['CUDA_VISIBLE_DEVICES']}")
+            logging.info(f"[{rank}/{cfg.world_size}]({dist.hostname()}/{dist.slurm_master()} w/ {utils.get_num_threads()} cores) CUDA_VISIBLE_DEVICES={os.environ['CUDA_VISIBLE_DEVICES']}")
     exec(main, cfg, *args, **kwargs)
 
 
@@ -123,7 +116,7 @@ def run(main, cfg, *args, **kwargs):
                 os.environ['MASTER_ADDR'] = dist.hostname()
                 os.environ['MASTER_PORT'] = str(cfg.dist_port)
                 os.environ['WORLD_SIZE'] = str(cfg.world_size)
-                return mp.spawn(launch, args=(main, cfg, args, kwargs), nprocs=cfg.world_size, daemon=False, join=True, context='fork')
+                return mp.start_processes(launch, args=(main, cfg, args, kwargs), nprocs=cfg.world_size, daemon=False, join=True, start_method='fork')
             elif cfg.dist == "slurm":
                 if 'SLURM_PROCID' not in os.environ:
                     # first time to sbatch with specified resource allocation
@@ -139,23 +132,3 @@ def run(main, cfg, *args, **kwargs):
     else:
         # Local worker with cfg.gpu
         exec(main, cfg, *args, **kwargs)
-
-
-def _step(executor, batch):
-    return executor.step(batch)
-
-
-class Executor(Engine):
-    r"""Abstract class wrapper of ignite engine for general iterative processing.
-
-    state:
-        batch, iteration, output
-        additional: dataloader, epoch=0, max_epochs, metrics={}
-        
-    """
-    def step(self, batch):
-        raise NotImplementedError
-
-    def __init__(self, cfg):
-        super(Executor, self).__init__(_step)
-        self.cfg = cfg

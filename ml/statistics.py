@@ -1,12 +1,13 @@
-import torch as th
 import numpy as np
-import pandas as pd
-import matplotlib as mp
-import matplotlib.pyplot as plt
 from pathlib import Path
 
-pd.set_option('display.expand_frame_repr', False)
-pd.set_option('precision', 2)
+try:
+    import pandas as pd
+except ImportError:
+    pass
+else:
+    pd.set_option('display.expand_frame_repr', False)
+    pd.set_option('precision', 2)
 
 def fscore(precision, recall, beta=1):
     product   = precision * recall

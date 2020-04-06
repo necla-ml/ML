@@ -14,7 +14,6 @@ aac: ['aac_latm', 'aac', 'aac_at', 'aac_fixed']
 vcodecs: ['mjpeg', 'mpeg4', 'h264', 'libx264', 'libopenh264', 'hevc']
 '''
 
-
 def fourcc(fmt):
     if len(fmt) != 4:
         raise ValueError(f"Expected four CC but got {fmt} of {len(fmt)} CC")
