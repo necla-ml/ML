@@ -29,6 +29,7 @@ requirements:
   run:
     - accimage>=0.1.1         # [not osx]
     - av
+#    - blosc
     - conda                   # [not osx]        # implicitly required by cudatoolkit-dev=10.0.*
     - conda-build
 #  - cudatoolkit=10.1.*       # [not osx]        # pytorch GPU dependency even on CPU machines except macOS
@@ -36,7 +37,8 @@ requirements:
     - cython=0.29.*
     - git
     - git-lfs
-    - h5py>=2.10.*
+#    - h5py>=2.10.*
+    - hdf5plugin
     - ignite
     - jsonpatch                 # implicitly required by visdom
     - line_profiler>=2.1.2
