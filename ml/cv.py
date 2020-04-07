@@ -51,12 +51,12 @@ def save(src, path, q=95):
     imwrite(str(path), src, [IMWRITE_JPEG_QUALITY, q])
 
 def loadGrayscale(path):
-    src = imread(str(path), IMREAD_GRAYSCALE)
+    src = cv2.imread(str(path), IMREAD_GRAYSCALE)
     return None if src.ndim == 0 else src
 
 def loadBGR(path):
     #src = imread(str(path))
-    src = imread(str(path), IMREAD_COLOR | IMREAD_IGNORE_ORIENTATION)
+    src = cv2.imread(str(path), IMREAD_COLOR | IMREAD_IGNORE_ORIENTATION)
     return None if src.ndim == 0 else src
 
 def imread(path, nc=3):
