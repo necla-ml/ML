@@ -38,8 +38,8 @@ requirements:
     - cython=0.29.*
     - git
     - git-lfs
-#    - h5py>=2.10.*
-    - hdf5plugin
+    - h5py>=2.10.*
+#    - hdf5plugin
     - ignite
     - jsonpatch                 # implicitly required by visdom
     - line_profiler>=2.1.2
@@ -57,7 +57,7 @@ requirements:
     - pytables>=3.5.2
     - pytest>=5.2.0
     - python=3.7
-    - python-blosc>=1.9
+#    - python-blosc>=1.9
     - python-daemon
     - pytorch=1.4
     - pyyaml>=5.1.2
