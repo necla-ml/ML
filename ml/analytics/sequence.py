@@ -44,10 +44,13 @@ class SequenceRuleEngine(object):
         stage = re.sub(r'\s+', '', stage)
         return re.sub(PATTERNS['repetition'], repeat, stage)
 
-    def compile(self, rule):
+    def compile(self, rule, ending=False):
         stages = rule.split(self.delimiter)
         parsed = ''.join(self.parse(s) for s in stages)
-        return re.compile(parsed)
+        if ending:
+            re.compile(parsed + '$')
+        else:
+            return re.compile(parsed)
 
     def encode(self, *sequence):
         output = []
