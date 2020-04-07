@@ -51,7 +51,7 @@ dev:
 	make co
 
 dev-setup: dev
-	pip install -e .
+	pip install -vv --no-deps --ignore-installed --no-build-isolation --no-binary :all: -e .
 
 uninstall-develop:
 	pip uninstall $$(basename -s .git `git config --get remote.origin.url`)
