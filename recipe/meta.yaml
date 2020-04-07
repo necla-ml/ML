@@ -30,6 +30,7 @@ requirements:
     - accimage>=0.1.1         # [not osx]
     - av
 #    - blosc
+    - blosc-hdf5-plugin
     - conda                   # [not osx]        # implicitly required by cudatoolkit-dev=10.0.*
     - conda-build
 #  - cudatoolkit=10.1.*       # [not osx]        # pytorch GPU dependency even on CPU machines except macOS
