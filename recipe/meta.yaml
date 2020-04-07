@@ -29,7 +29,6 @@ requirements:
   run:
     - accimage>=0.1.1         # [not osx]
     - av
-    - blosc>=1.17
     - conda                   # [not osx]        # implicitly required by cudatoolkit-dev=10.0.*
     - conda-build
 #  - cudatoolkit=10.1.*       # [not osx]        # pytorch GPU dependency even on CPU machines except macOS
@@ -55,6 +54,7 @@ requirements:
     - pytables>=3.5.2
     - pytest>=5.2.0
     - python=3.7
+    - python-blosc>=1.9
     - python-daemon
     - pytorch=1.4
     - pyyaml>=5.1.2
