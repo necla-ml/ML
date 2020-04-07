@@ -4,8 +4,10 @@ from pathlib import Path
 
 import ml
 from ml import (
+    cuda,
     distributed as dist,
     multiprocessing as mp,
+    random,
     utils,
     logging,)
 
@@ -20,13 +22,13 @@ def init_cuda(cfg):
             if 'CUDA_VISIBLE_DEVICES' in os.environ and os.environ['CUDA_VISIBLE_DEVICES'] != 'NoDevFiles':
                 cfg.gpu = sorted(map(int, os.environ['CUDA_VISIBLE_DEVICES'].split(',')))
             else:
-                cfg.gpu = list(range(ml.cuda.device_count()))
+                cfg.gpu = list(range(cuda.device_count()))
         os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(sorted(map(str, cfg.gpu)))
         
 
 def init(cfg):
     init_cuda(cfg)
-    ml.random.seed(cfg.seed, deterministic=cfg.deterministic)
+    random.seed(cfg.seed, deterministic=cfg.deterministic)
     if (cfg.logging or cfg.daemon) and cfg.logfile is None:
         from __main__ import __file__ as script
         cfg.logging = True
