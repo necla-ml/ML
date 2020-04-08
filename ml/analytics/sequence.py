@@ -48,7 +48,7 @@ class SequenceRuleEngine(object):
         stages = rule.split(self.delimiter)
         parsed = ''.join(self.parse(s) for s in stages)
         if ending:
-            re.compile(parsed + '$')
+            return re.compile(parsed + '$')
         else:
             return re.compile(parsed)
 
