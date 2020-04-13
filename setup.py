@@ -18,7 +18,35 @@ from torch.utils.cpp_extension import CppExtension, CUDAExtension, CUDA_HOME
 from ml.shutil import run as sh
 from ml import logging
 
+named_arches = collections.OrderedDict([
+    ('Kepler+Tesla', '3.7'),
+    ('Kepler', '3.5+PTX'),
+    ('Maxwell+Tegra', '5.3'),
+    ('Maxwell', '5.0;5.2+PTX'),
+    ('Pascal', '6.0;6.1+PTX'),
+    ('Volta', '7.0+PTX'),
+    ('Turing', '7.5+PTX'),
+])
 
+supported_arches = ['3.5', '3.7', '5.0', '5.2', '5.3', '6.0', '6.1', '6.2',
+                    '7.0', '7.2', '7.5']
+
+valid_arch_strings = supported_arches + [s + "+PTX" for s in supported_arches]
+
+# SM52 or SM_52, compute_52 
+#   – Quadro M6000, 
+#   - GeForce 900, GTX-970, GTX-980, 
+#   - GTX Titan X
+# SM61 or SM_61, compute_61 
+#   – GTX 1080, GTX 1070, GTX 1060, GTX 1050, GTX 1030,
+#   - Titan Xp, Tesla P40, Tesla P4, 
+#   - Discrete GPU on the NVIDIA Drive PX2
+# SM75 or SM_75, compute_75 
+#   – GTX/RTX Turing 
+#   – GTX 1660 Ti, RTX 2060, RTX 2070, RTX 2080, 
+#   - Titan RTX,
+
+os.environ['TORCH_CUDA_ARCH_LIST'] = '5.2;6.1;7.5'
 cwd = Path(__file__).parent
 pkg = sh('basename -s .git `git config --get remote.origin.url`').lower()
 PKG = pkg.upper()
