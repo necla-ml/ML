@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import distutils.command.clean
 from pathlib import Path
+from collections import OrderedDict
 
 from setuptools import setup, find_packages, find_namespace_packages
 from pkg_resources import get_distribution, DistributionNotFound
@@ -18,7 +19,7 @@ from torch.utils.cpp_extension import CppExtension, CUDAExtension, CUDA_HOME
 from ml.shutil import run as sh
 from ml import logging
 
-named_arches = collections.OrderedDict([
+named_arches = OrderedDict([
     ('Kepler+Tesla', '3.7'),
     ('Kepler', '3.5+PTX'),
     ('Maxwell+Tegra', '5.3'),
