@@ -12,6 +12,7 @@ START_CODE32 = bytes.fromhex('00000001')
 class NALU_t(IntEnum):
     NIDR = 1 
     IDR = 5
+    SEI = 6
     SPS = 7
     PPS = 8
 
