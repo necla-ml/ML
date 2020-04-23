@@ -42,7 +42,7 @@ CODECS = dict(
 )
 
 
-def avcodec(fmt):
+def codec(fmt):
     '''Returns registered codec name in FFMPEG and fourCC.
     
     Args:
