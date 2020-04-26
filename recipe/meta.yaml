@@ -16,7 +16,8 @@ build:
 
 requirements:
   host:
-    - cudatoolkit=10.1        # [not osx]        # pytorch GPU dependency even on CPU machines except macOS
+    - cpuonly                 [osx]
+    - cudatoolkit=10.1        [not osx]        # pytorch GPU dependency even on CPU machines except macOS
     - h5py
     - ignite
     - numexpr
@@ -28,12 +29,13 @@ requirements:
     - torchvision
     - setuptools
   run:
-    - accimage>=0.1.1         # [not osx]
+    - accimage>=0.1.1         [not osx]
     - av
     - blosc-hdf5-plugin
     - conda                   # [not osx]        # implicitly required by cudatoolkit-dev=10.0.*
     - conda-build
-    - cudatoolkit=10.1        # [not osx]        # pytorch GPU dependency even on CPU machines except macOS
+    - cpuonly                 [osx]
+    - cudatoolkit=10.1        [not osx]        # pytorch GPU dependency even on CPU machines except macOS
 #   - cudatoolkit-dev=10.1.*  # [not osx]        # separate installation for local development requiring >= 24GB tmp space
     - cython=0.29.*
     - git
