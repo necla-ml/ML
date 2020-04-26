@@ -1,6 +1,7 @@
 {% set setup = load_setup_py_data(setup_file='../setup.py', from_recipe_dir=True) %}
 
 package:
+  # pytorch and numexpr required to load setup.py
   name: {{ setup.name | lower }}
   version: {{ environ.get('GIT_DESCRIBE_TAG', '').replace('v', '') }}
 
@@ -16,8 +17,7 @@ build:
 
 requirements:
   host:
-    - cpuonly                 [osx]
-    - cudatoolkit=10.1        [not osx]        # pytorch GPU dependency even on CPU machines except macOS
+    - cudatoolkit=10.1      # even on macOS
     - h5py
     - ignite
     - numexpr
@@ -34,17 +34,16 @@ requirements:
     - blosc-hdf5-plugin
     - conda                   # [not osx]        # implicitly required by cudatoolkit-dev=10.0.*
     - conda-build
-    - cpuonly                 [osx]
-    - cudatoolkit=10.1        [not osx]        # pytorch GPU dependency even on CPU machines except macOS
+    - cudatoolkit=10.1        # even on macOS
 #   - cudatoolkit-dev=10.1.*  # [not osx]        # separate installation for local development requiring >= 24GB tmp space
-    - cython=0.29.*
+    - cython=0.29
     - git
     - git-lfs
-    - h5py>=2.10.*
+    - h5py>=2.10
     - ignite
     - jsonpatch                 # implicitly required by visdom
     - line_profiler>=2.1.2
-    - magma-cuda100>=2          # [not osx]
+    - magma-cuda100>=2          [not osx]
     - matplotlib>=3.1.1
     - pandas>=0.25.1
     - lbzip2
