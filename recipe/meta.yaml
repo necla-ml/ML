@@ -17,7 +17,8 @@ build:
 
 requirements:
   host:
-    - cudatoolkit=10.1      # even on macOS
+    - cpuonly                 [osx]             # required for macOS to satisfy cudatoolkit
+    - cudatoolkit=10.1                          # even on macOS
     - h5py
     - ignite
     - numexpr
@@ -34,7 +35,8 @@ requirements:
     - blosc-hdf5-plugin
     - conda                   # [not osx]        # implicitly required by cudatoolkit-dev=10.0.*
     - conda-build
-    - cudatoolkit=10.1        # even on macOS
+    - cpuonly                 [osx]
+    - cudatoolkit=10.1                           # even on macOS
 #   - cudatoolkit-dev=10.1.*  # [not osx]        # separate installation for local development requiring >= 24GB tmp space
     - cython=0.29
     - git
