@@ -2,6 +2,8 @@ from enum import IntEnum
 from ml import logging
 
 __all__ = [
+    'NALU_t',
+    'NALUParser',
     'H264Framer',
 ]
 

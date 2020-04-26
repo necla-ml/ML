@@ -1,1 +1,1 @@
-from .decoder import MultipartStreamDecoder
+from .decoder import *
