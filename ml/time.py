@@ -1,0 +1,8 @@
+from time import *
+
+EPOCH_AS_FILETIME      = 116444736000000000
+HUNDREDS_OF_NANOS_HOUR = 60 * 60 * 1000000000 // 100   # 3.6e10
+HUNDREDS_OF_NANOS_SEC  = 1000000000 // 100             # 1e7
+
+def fromFileTime(ft):
+    return (ft - EPOCH_AS_FILETIME) / HUNDREDS_OF_NANOS_SEC
