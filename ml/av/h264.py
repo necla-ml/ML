@@ -27,7 +27,7 @@ def parseNALUHeader(header):
 def NALUParser(bitstream, workaround=False):
     '''
     Args:
-        bitstream: a memory view that incurs zero copy
+        bitstream: a writable bytes-like object that incurs zero copy for slicing
     '''
 
     # FIXME Assume at most three NALUs for fast parsing
