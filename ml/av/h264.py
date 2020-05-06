@@ -54,7 +54,8 @@ def NALUParser(bitstream, workaround=False):
             pos += start24or32
             header = bitstream[pos]
             _, _, type = parseNALUHeader(header)
-            if type in [NALU_t.NIDR | NALU_t.IDR]:
+            if type in (NALU_t.NIDR, NALU_t.IDR):
+                # XXX Skip to the end for speedup
                 pos = len(bitstream)
         elif next32 == START_CODE32:
             if start < pos:
@@ -71,7 +72,8 @@ def NALUParser(bitstream, workaround=False):
             pos += start24or32
             header = bitstream[pos]
             _, _, type = parseNALUHeader(header)
-            if type in [NALU_t.NIDR | NALU_t.IDR]:
+            if type in (NALU_t.NIDR, NALU_t.IDR):
+                # XXX Skip to the end for speedup
                 pos = len(bitstream)
         else:
             pos += 1
