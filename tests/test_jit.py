@@ -3,13 +3,19 @@ import numpy as np
 from array import array
 
 @njit
+def method(bitstream, workaround=False):
+    start = 0
+    header = (1,2,3)
+    buf = len(bitstream[0:4])
+    buf = bitstream[4] 
+    # return (start, *header), buf
+    return bitstream
+
 def test_memoryview():
-    buf = np.array([1,2,3,4])
-    #view = memoryview(buf)
-    n = len(buf)
-    print(n)
-    if n != 3:
-        raise Exception('bad')
+    a = bytearray(8)
+    ma = memoryview(a)
+    output = method(ma, workaround=True)
+    print(output)
 
 import torch
 
