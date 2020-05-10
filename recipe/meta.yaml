@@ -46,6 +46,7 @@ requirements:
     - magma-cuda100>=2          [not osx]
     - matplotlib>=3.1.1
     - numba                     # optional: experimental speedup with JIT
+    - numexpr
     - pandas>=0.25.1
     - lbzip2
     - opencv
@@ -70,6 +71,7 @@ requirements:
     - transformers>=2.1.1
 test:
   imports:
+    - ml.av
     - ml.cv
     - ml.ops
   commands:
