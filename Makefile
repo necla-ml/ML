@@ -2,6 +2,7 @@
 .PHONY: build install uninstall clean
 
 HOST:=$(shell uname -s | tr A-Z a-z)
+CHANNEL?=NECLA-ML
 
 all: build
 
@@ -35,7 +36,20 @@ conda-index:
 conda-build:
 	conda config --set anaconda_upload yes
 	conda-build purge-all
-	conda-build --user NECLA-ML recipe
+	CONDA_CPUONLY_FEATURE="" \
+		CONDA_CUDATOOLKIT_CONSTRAINT="    - cudatoolkit >=10.1,<10.2 # [not osx]" \
+		MAGMA_PACKAGE="    - magma-cuda101 # [not osx and not win]" \
+		BLD_STR_SUFFIX="" \
+		conda-build --user $(CHANNEL) recipe
+
+conda-build-cpu:
+	conda config --set anaconda_upload yes
+	conda-build purge-all
+	CONDA_CPUONLY_FEATURE="    - cpuonly # [not osx]" \
+		CONDA_CUDATOOLKIT_CONSTRAINT="    - cpuonly # [not osx]" \
+		MAGMA_PACKAGE="" \
+		BLD_STR_SUFFIX="_cpu" \
+		conda-build --user $(CHANNEL) recipe
 
 conda-clean:
 	conda clean --all
