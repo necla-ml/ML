@@ -1,5 +1,6 @@
 try:
     from torch.multiprocessing import *
+    from torch.multiprocessing import start_processes
 except ImportError as e:
     # XXX In case of torch unavailable
     from multiprocessing import *
