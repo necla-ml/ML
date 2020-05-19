@@ -63,6 +63,7 @@ class ArgumentParser(argparse.ArgumentParser):
                                                          'GPUMODEL_RTX2080TI'],                                 help='GPU model constraint w.r.t. memory capacity')
         self.add_argument('--slurm-mem', default='16G',                                                         help='Max host memory to allocate')
         self.add_argument('--slurm-time', default='0',                                                          help='Time limit')
+        self.add_argument('--slurm-export', default='',                                                         help='Time limit')
 
     def convert_arg_line_to_args(self, line):
         tokens = line.strip().split()

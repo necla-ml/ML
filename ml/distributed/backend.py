@@ -30,6 +30,8 @@ def slurm_sbatch(cfg, **kwargs):
         #f"--ntasks={ntasks}",                               # 8->2
         #f"--cpus-per-task={cfg.slurm_cpus_per_task}",       # 5->3
         #f"--export=ALL,PYTHONPATH=.",
+        #f"--export=ALL,NCCL_LL_THRESHOLD=0",                # no blocking but NaN
+        f"--export=ALL,{cfg.slurm_export}",
         f"--output=slurm-%j_%t.out",
         '--open-mode=append',
         '--kill-on-bad-exit=1',
