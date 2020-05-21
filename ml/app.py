@@ -25,7 +25,6 @@ def init_cuda(cfg):
                 cfg.gpu = list(range(cuda.device_count()))
         os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(sorted(map(str, cfg.gpu)))
         
-
 def init(cfg):
     init_cuda(cfg)
     random.seed(cfg.seed, deterministic=cfg.deterministic)
@@ -47,13 +46,12 @@ def init(cfg):
     if cfg.dist:
         if cfg.world_size > 1:
             dist.init_process_group(init_method=cfg.dist_url, backend=cfg.dist_backend, rank=cfg.rank, world_size=cfg.world_size)
-            logging.info(f"[{cfg.rank}/{cfg.world_size}] HOST: {dist.hostname()}")
+            logging.info(f"[{cfg.rank}/{cfg.world_size}] '{dist.hostname()}' distributed with {cfg.dist_backend} using {cfg.dist_url}")
             for key in ['MASTER_ADDR', 'MASTER_PORT', 'WORLD_SIZE', 'CUDA_VISIBLE_DEVICES']:
                 if key in os.environ:
                     logging.info(f"[{cfg.rank}/{cfg.world_size}] {key}: {os.environ[key]}")
         else:
             logging.info(f"HOST: {dist.hostname()} w/o distributed communication")
-
 
 def exec(main, cfg, *args, **kwargs):
     if cfg.daemon:
@@ -76,7 +74,6 @@ def exec(main, cfg, *args, **kwargs):
     else:
         init(cfg)
         main(cfg, *args, **kwargs)
-
 
 def launch(rank, main, cfg, args, kwargs):
     # New GPU worker proc
@@ -104,7 +101,6 @@ def launch(rank, main, cfg, args, kwargs):
             cfg.gpu = [devices[cfg.rank % cfg.slurm_ntasks_per_node]]
             logging.info(f"[{rank}/{cfg.world_size}]({dist.hostname()}/{dist.slurm_master()} w/ {utils.get_num_threads()} cores) CUDA_VISIBLE_DEVICES={os.environ['CUDA_VISIBLE_DEVICES']}")
     exec(main, cfg, *args, **kwargs)
-
 
 def run(main, cfg, *args, **kwargs):
     if cfg.dist:

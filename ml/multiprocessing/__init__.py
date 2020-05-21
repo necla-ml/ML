@@ -1,10 +1,11 @@
 try:
-    from torch.multiprocessing import *
     from torch.multiprocessing import start_processes
+    from torch.multiprocessing import *
 except ImportError as e:
-    # XXX In case of torch unavailable
-    from multiprocessing import *
-    import sys, signal
+    # XXX In case of torch <=1.4
+    from torch.multiprocessing import *
+    from multiprocessing import connection
+    import platform, sys, signal
     import ctypes, ctypes.util
     from ml import logging
     if platform.system() == "Windows":
