@@ -47,6 +47,7 @@ requirements:
     - matplotlib>=3.1.1
     - numba                     # optional: experimental speedup with JIT
     - numexpr
+    - numpy=1.17                # https://github.com/cocodataset/cocoapi/issues/356
     - pandas>=0.25.1
     - lbzip2
     - opencv
