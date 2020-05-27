@@ -3,9 +3,6 @@ import warnings
 from torch.autograd import Variable
 from torch.nn import Module
 import torch
-#from .model import Model
-#from .container import Sequential
-#from .activation import LogSoftmax
 from .. import functional as F
 
 class _Loss(Module):
@@ -41,4 +38,3 @@ class SSIMLoss(_Loss):
         size_average = self.size_average if size_average is None else size_average
         reduce = self.reduce if reduce is None else reduce
         return 1 - F._ssim(img1, img2, window, self.window_size, nc, size_average, reduce)
-
