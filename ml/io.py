@@ -1,6 +1,9 @@
+import os
 import pickle
 from io import *
 from pathlib import Path
+
+from .import logging
 
 COMP_LIBS=[
     'zlib',
@@ -81,7 +84,6 @@ def save(data, path, meta=None, complevel=6, complib='blosc:zstd', bitshuffle=Tr
         with open(path, 'w') as f:
             f.write(repr(data))
 
-
 def load(path, **kwargs):
     mode = kwargs.pop('mode', 'r')
     path = Path(path)
@@ -102,6 +104,14 @@ def load(path, **kwargs):
         with open(path, mode) as f:
             return eval(f.read())
 
+def download(url, path, force=False):
+    path = Path(path)
+    res = 0
+    if not path.exists():
+        logging.info(f"Downloading {url}...")
+        res = os.system(f"curl -f {url} -o {path}")
+    logging.info(f"Downloaded {url} to {path}")
+    return res == 0 and os.path.exists(path)
 
 def close_all():
     tables.file._open_files.close_all()
