@@ -107,9 +107,11 @@ def load(path, **kwargs):
 def download(url, path, force=False):
     path = Path(path)
     res = 0
-    if not path.exists():
+    if not path.exists() or force:
+        cmd = f"curl -LJfq {url} -o {path}"
         logging.info(f"Downloading {url}...")
-        res = os.system(f"curl -f {url} -o {path}")
+        logging.info(cmd)
+        res = os.system(cmd)
     logging.info(f"Downloaded {url} to {path}")
     return res == 0 and os.path.exists(path)
 
