@@ -45,6 +45,7 @@ def create(cfg="yolov4.cfg"):
         elif mtype == 'yolo':
             yolo_index += 1
             module = nn.YOLOHead.create(mdef, yolo_index)
+            modules[-2].pooled = True
             '''
             # Initialize preceding Conv2d() bias (https://arxiv.org/pdf/1708.02002.pdf section 3.3)
             try:
@@ -131,6 +132,7 @@ class YOLOv4(nn.Module):
         self.cfg = Config(cfg)
         self.routed = routed
         self.stages = modules
+        self.pooled = []
         self.logits = []
         self.debug = debug
         if self.debug:
@@ -192,6 +194,7 @@ class YOLOv4(nn.Module):
         height, width = x.shape[-2:]
         predictions = []    # head predictions
         outputs = []        # per layer output
+        self.pooled.clear()
         self.logits.clear()
         if verbose:
             logging.info(f'x.shape: {list(x.shape)}')
@@ -217,15 +220,16 @@ class YOLOv4(nn.Module):
                 if self.debug:
                     logging.info(f"[{i}] {name} output shape={tuple(x.shape)}, sum={x.sum():.3f}")
             elif name == 'YOLOHead':
-                predictions.append(module(x))
+                self.pooled.append(outputs[-2])
                 self.logits.append(x)
+                predictions.append(module(x))
             else:  
                 # 'convolutional', 'upsample', 'maxpool', 'batchnorm2d' etc.
                 x = module(x)
                 if self.debug:
                     logging.info(f"[{i}] {name} output shape={tuple(x.shape)}, sum={x.sum():.3f}")
 
-            outputs.append(x if self.routed[i] else None)
+            outputs.append(x if self.routed[i] or hasattr(module, "pooled") else None)
             if verbose:
                 logging.info(f'{nane}[{i}/{len(self.stages)}] {list(x.shape)} {msg}')
                 msg = ''
