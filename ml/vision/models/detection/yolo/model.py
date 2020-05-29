@@ -131,6 +131,7 @@ class YOLOv4(nn.Module):
         self.cfg = Config(cfg)
         self.routed = routed
         self.stages = modules
+        self.logits = []
         self.debug = debug
         if self.debug:
             logging.info(f"{self.__class__.__name__}:")
@@ -150,6 +151,7 @@ class YOLOv4(nn.Module):
                 for i in range(2, len(stage)):
                     stage[i-1] = stage[i]
                 del stage[-1]
+                stage.with_bn = False
                 fused += 1
         logging.info(f"Fused {fused} convolutional stages with 2D BN")
 
@@ -190,6 +192,7 @@ class YOLOv4(nn.Module):
         height, width = x.shape[-2:]
         predictions = []    # head predictions
         outputs = []        # per layer output
+        self.logits.clear()
         if verbose:
             logging.info(f'x.shape: {list(x.shape)}')
             msg = ''
@@ -215,6 +218,7 @@ class YOLOv4(nn.Module):
                     logging.info(f"[{i}] {name} output shape={tuple(x.shape)}, sum={x.sum():.3f}")
             elif name == 'YOLOHead':
                 predictions.append(module(x))
+                self.logits.append(x)
             else:  
                 # 'convolutional', 'upsample', 'maxpool', 'batchnorm2d' etc.
                 x = module(x)
@@ -234,10 +238,10 @@ class YOLOv4(nn.Module):
             y = torch.cat(y, 1)  # cat yolo outputs
             if augment:  # de-augment results
                 y = torch.split(y, bs, dim=0)
-                y[1][..., :4] /= s[0]  # scale
-                y[1][..., 0] = width - y[1][..., 0]  # flip lr
-                y[2][..., :4] /= s[1]  # scale
-                y = torch.cat(y, 1)
+                y[1][..., :4] /= s[0]               # scale
+                y[1][..., 0] = width - y[1][..., 0] # flip lr
+                y[2][..., :4] /= s[1]               # scale
+                y = torch.cat(y, 1)                 # (B, AG, 85)
             return y #, logits
         
 '''
