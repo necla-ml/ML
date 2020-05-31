@@ -69,3 +69,6 @@ tags
 # Generated logs
 screenlog.*
 *.log
+
+# MISC
+*.bak
