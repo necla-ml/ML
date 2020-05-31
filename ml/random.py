@@ -1,3 +1,4 @@
+from random import *
 import random
 
 def seed(s, deterministic=True):

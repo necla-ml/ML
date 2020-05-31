@@ -21,3 +21,10 @@ def round(n, digits=None):
         except ImportError as e:
             logging.error(f"No pytorch to round potential tensor input of type {type(n)}")
             raise e
+
+def factorize(n):
+    ceiling = floor(sqrt(n))
+    for i in range(ceiling, 0, -1):
+        if n % i == 0:
+            return i, n // i
+    return None

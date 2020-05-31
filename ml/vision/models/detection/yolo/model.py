@@ -119,7 +119,7 @@ def load(cfg="yolov4.cfg", target='yolov4.weights', force=False):
         routed=routed,
     )
 
-class YOLOv4(nn.Module):
+class YOLO(nn.Module):
     @classmethod
     def create(cls, cfg="yolov4.cfg", weights='yolov4.weights', debug=False):
         chkpt = load(cfg, weights)
@@ -128,7 +128,7 @@ class YOLOv4(nn.Module):
         return cls(chkpt['cfg'], chkpt['modules'], chkpt['routed'], version=ver, seen=seen, debug=debug)
     
     def __init__(self, cfg, modules, routed, version=None, seen=None, debug=False):
-        super(YOLOv4, self).__init__()
+        super(YOLO, self).__init__()
         self.cfg = Config(cfg)
         self.routed = routed
         self.stages = modules
@@ -237,7 +237,6 @@ class YOLOv4(nn.Module):
         if self.training:
             return predictions
         else:
-            # y, logits = zip(*predictions)
             y = predictions
             y = torch.cat(y, 1)  # cat yolo outputs
             if augment:  # de-augment results
@@ -246,7 +245,7 @@ class YOLOv4(nn.Module):
                 y[1][..., 0] = width - y[1][..., 0] # flip lr
                 y[2][..., :4] /= s[1]               # scale
                 y = torch.cat(y, 1)                 # (B, AG, 85)
-            return y #, logits
+            return y
         
 '''
 # [YOLOv4-pytorch](https://github.com/romulus0914/YOLOv4-PyTorch)

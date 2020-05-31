@@ -1,7 +1,9 @@
 from pathlib import Path
+import time
 import torch
 
 from ..... import io, logging
+from ....ops import *
 
 def parse(cfg):
     import re
@@ -21,9 +23,9 @@ def parse(cfg):
             key = key.strip()
             val = val.strip()
             if key == 'anchors':  # return nparray
-                mdefs[-1][key] = torch.tensor([float(x) for x in re.split(",\s*", val)]).view(-1, 2)
+                mdefs[-1][key] = torch.tensor([float(x) for x in re.split(r",\s*", val)]).view(-1, 2)
             elif (key in ['from', 'layers', 'mask']) or (key == 'size' and ',' in val):  # return array
-                mdefs[-1][key] = [int(x) for x in re.split(",\s*", val)]
+                mdefs[-1][key] = [int(x) for x in re.split(r",\s*", val)]
             else:
                 if val.isnumeric():
                     mdefs[-1][key] = int(val) if (int(val) - float(val)) == 0 else float(val)
@@ -44,10 +46,33 @@ def parse(cfg):
     assert not u, f"Unsupported fields {u} in {cfg}. See https://github.com/ultralytics/yolov3/issues/631"
     return mdefs
 
-import time
-from ....ops import *
-# from utils.utils import *
-def postprocess(prediction, conf_thres=0.1, iou_thres=0.6, agnostic=False, multi_label=False, classes=None):
+def preprocess(image, size=608):
+    """Sequential preprocessing of input images for YOLO
+    Args:
+        image(str | list[str] | ndarray | list[ndarray]): image filename(s) or CV2 BGR image(s)
+    Returns:
+        images():
+    """
+    import numpy as np
+    from ..... import cv
+    if isinstance(image, (str, np.ndarray)):
+        images = [image]
+    else:
+        images = image
+    if isinstance(images[0], str):
+        images = cv.imread(images)
+    resized = []
+    metas = []
+    for img in images:
+        img, meta = cv.letterbox(img, size=size)
+        resized.append(cv.toTorch(img))
+        metas.append(meta)
+    return torch.stack(resized), metas
+    
+def batched_nms(predictions, 
+                conf_thres=0.3, iou_thres=0.6, 
+                agnostic=False, merge=True, 
+                multi_label=False, classes=None):
     """Perform NMS on inference results
     Args:
         prediction(B, AG, 4+1+80): center, width and height refinement, plus anchor and class scores 
@@ -55,22 +80,18 @@ def postprocess(prediction, conf_thres=0.1, iou_thres=0.6, agnostic=False, multi
         conf_thres(float): anchor confidence threshold
         iou_thres(float): NMS IoU threshold
         agnostic(bool): class agnostic NMS or per class NMS
+        merge(bool): weighted merge by IoU for best mAP
         multi_label(bool): whether to select mulitple class labels above the threshold or just the max
         classes(list | tuple): class ids of interest to retain
     Returns:
         output(B, N, 6): list of detections per image in (x1, y1, x2, y2, conf, cls)
     """
-    # Settings
-    merge = True                # merge for best mAP
-    min_wh, max_wh = 2, 4096    # (pixels) minimum and maximum box width and height
-    time_limit = 10.0           # seconds to quit after
-
-    t = time.time()
-    B, _, nc = prediction.shape
+    min_wh, max_wh = 2, 4096                                        # minimum and maximum box width and height
+    B, _, nc = predictions.shape
     nc -= 5
     multi_label &= nc > 1                                           # multiple labels per box if nc > 1 too
     output = [None] * B
-    for b, x in enumerate(prediction):                              # image index and inference
+    for b, x in enumerate(predictions):                             # image index and inference
         x = x[x[:, 4] > conf_thres]                                 # Threshold anchors by confidence
         x = x[((x[:, 2:4] > min_wh) & (x[:, 2:4] < max_wh)).all(1)] # width/height constraints
         if x.numel() == 0:
@@ -114,7 +135,30 @@ def postprocess(prediction, conf_thres=0.1, iou_thres=0.6, agnostic=False, multi
                 logging.error(f"Failed to merge NMS boxes by weighted IoU: {e}")
                 print(x, x.shape, keep, keep.shape)
         output[b] = x[keep]
-        if (time.time() - t) > time_limit:
-            logging.warning("NMS timeout for {time_limit}s")
-            break
     return output
+
+def postprocess(metas, predictions, 
+                conf_thres=0.3, iou_thres=0.6, 
+                agnostic=False, merge=True, 
+                multi_label=False, classes=None):
+    """Post-process to restore predictions on pre-processed images back.
+    Args:
+        images(list[BGR]):
+    """
+    results = [None] * len(predictions)
+    predictions = batched_nms(predictions, conf_thres, iou_thres, agnostic, merge, multi_label, classes)
+    for b, (meta, pred) in enumerate(zip(metas, predictions)):
+        if pred is None or len(pred) == 0:
+            continue
+        # Shift back
+        top, left = meta['offset']
+        pred[:, [0, 2]] -= left
+        pred[:, [1, 3]] -= top
+        # Scale back
+        rH, rW = meta['ratio']
+        pred[:, [0, 2]] /= rW
+        pred[:, [1, 3]] /= rH
+        # Clip boxes
+        pred[:, :4] = clip_boxes_to_image(pred[:, :4].round(), meta['shape'])
+        results[b] = pred.cpu()
+    return results

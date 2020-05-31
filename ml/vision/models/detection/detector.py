@@ -8,8 +8,15 @@ from torchvision.models.detection import MaskRCNN
 from torchvision.ops import MultiScaleRoIAlign
 import torch as th
 
-from .... import nn, logging
+from .... import nn, random, sys, logging
+from ...datasets import coco
 from .. import backbone
+
+COLORS91 = [[random.randint(0, 255) for _ in range(3)] for _ in range(len(coco.COCO91_CLASSES))]
+COLORS80 = [COLORS91[coco.COCO80_TO_91[i]] for i in range(len(coco.COCO80_CLASSES))]
+
+def yolo4(pretrained=True):
+    return YOLODetector()
 
 def mask_rcnn(pretrained=False, num_classes=1+90, representation=1024, backbone=None, with_mask=True, **kwargs):
     if backbone is None:
@@ -108,11 +115,11 @@ class Detector(nn.Module):
         pass
 
     @abstractmethod
-    def rpn(self, images, pooling=False, **kwargs):
+    def rpn(self, images, **kwargs):
         pass
 
     @abstractmethod
-    def detect(self, images, pooling=False, **kwargs):
+    def detect(self, images, **kwargs):
         pass
     
     @abstractmethod
@@ -129,21 +136,81 @@ class Detector(nn.Module):
                     out_file=None):
         pass
 
+class YOLODetector(Detector):
+    def __init__(self, cfg='yolov4.cfg', weights='yolov4.weights', device=None):
+        from ml.vision.models import YOLO
+        import torch
+        model = YOLO.create(cfg, weights)
+        device = device or (torch.cuda.is_available() and "cuda" or "cpu")
+        super().__init__(model.to(device))
+
+    @property
+    def with_det(self):
+        return True
+
+    def detect(self, images, **kwargs):
+        """Perform object detection.
+        Args:
+            images(str | list[str] | Tensor[B,C,H,W]): filename, list of filenames or an image tensor batch
+        Returns:
+            detection(list[Tensor[N, 6]]): list of object detection tensors in [x1, y1, x2, y2, score, class] per image
+            pooled(list[Tensor[B, 256 | 512 | 1024, GH, GW]], optional): pooled features at three different scales
+        """
+        mode = self.training
+        self.eval()
+        model = self.module
+        dev = next(model.parameters()).device
+
+        from ml.vision.models.detection import yolo
+        mosaic = kwargs.get('mosaic', False)
+        pooling = kwargs.get('pooling', False)
+        size = kwargs.get('size', 608)
+        cfg = dict(
+            conf_thres = kwargs.get('conf_thres', 0.3),
+            iou_thres = kwargs.get('iou_thres', 0.6),
+            agnostic = kwargs.get('agnostic', False),
+            merge = kwargs.get('agnostic', True),
+        )
+        batch, metas = yolo.preprocess(images, size=size)
+        with th.no_grad():
+            predictions = model(batch.to(dev))
+        results = yolo.postprocess(metas, predictions, **cfg)
+        self.train(mode)
+        return (results, model.pooled) if pooling else results
+    
+    def forward(self, images, targets=None):
+        raise NotImplementedError
+
+    def render(self,
+                img,
+                result,
+                classes=coco.COCO80_CLASSES,
+                score_thr=0.3,
+                show=True,
+                wait_time=0,
+                path=None):
+        """Visualize the detection on the image and optionally save to a file.
+        Args:
+            img(BGR): CV2 BGR.
+            result(Tensor): detection result in [x1, y1, x2, y2, score, class]
+            classes(list[str] or tuple[str]): A list of trained class names
+            score_thr(float): The threshold to visualize the bboxes and masks.
+            wait_time (int): Value of waitKey param for display
+            path(str, optional): path to save the rendered image
+        """
+        from ml import cv
+        result = result[result[:, 4] >= score_thr]
+        labels = [classes[c.int()] for c in result[:, 5]]
+        scores = [f"{s*100:.2f}%" for s in result[:, 4]]
+        colors = [COLORS80[c.int()] for c in result[:, 5]]
+        cv.drawBoxes(img, result[:, :4], labels=labels, scores=result[:, 4], colors=colors)
+        path = path and Path(path) or None
+        if sys.x_available() and show:
+            cv.imshow(img, title=path or '')
+        if path:
+            cv.save(img, path)
+
 class THDetector(Detector):
-    COCO_CLASSES = ('bg',
-                    'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat', 'traffic_light', 
-                    'fire_hydrant', 'X street sign', 'stop_sign', 'parking_meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep', 
-                    'cow', 'elephant', 'bear', 'zebra', 'giraffe', 'X hat', 'backpack', 'umbrella', 'X shoe', 'X eye glasses' , 
-                    'handbag', 'tie', 'suitcase', 'frisbee',  'skis', 'snowboard', 'sports_ball', 'kite', 'baseball_bat', 'baseball_glove', 
-                    'skateboard', 'surfboard', 'tennis_racket', 'bottle', 'X plate', 'wine_glass', 'cup', 'fork', 'knife', 'spoon', 
-                    'bowl', 'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot', 'hot_dog', 'pizza', 'donut', 
-                    'cake', 'chair', 'couch', 'potted_plant', 'bed', 'X mirror', 'dining_table', 'X window', 'X desk', 'toilet', 
-                    'X door', 'tv', 'laptop',  'mouse', 'remote', 'keyboard', 'cell_phone', 'microwave', 'oven', 'toaster', 
-                    'sink', 'refrigerator', 'X blender', 'book', 'clock', 'vase', 'scissors', 'teddy_bear', 'hair_drier', 'toothbrush',
-                    'X hair brush')
-
-    #__metaclass__ = Detector #ABCMeta
-
     def __init__(self, model):
         super(THDetector, self).__init__(model)
 
@@ -310,7 +377,7 @@ class THDetector(Detector):
     def show_result(self,
                     img,
                     result,
-                    classes=None,
+                    classes=coco.COCO91_CLASSES,
                     score_thr=0.3,
                     wait_time=0,
                     out_file=None):
@@ -341,7 +408,7 @@ class THDetector(Detector):
             img.copy(),
             bboxes,
             labels,
-            class_names=self.COCO_CLASSES if classes is None else classes,
+            class_names=self.CLASSES if classes is None else classes,
             score_thr=score_thr,
             show=out_file is None,
             wait_time=wait_time,
@@ -501,7 +568,7 @@ class MMDetector(Detector):
     def show_result(self,
                     img,
                     result,
-                    classes=None,
+                    classes=coco.COCO80_CLASSES,
                     score_thr=0.3,
                     wait_time=0,
                     out_file=None):

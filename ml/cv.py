@@ -1,12 +1,15 @@
 import os
 import math
+import random
 from pathlib import Path
 
 import numpy as np
 
 from PIL import Image
-from cv2 import *
 import cv2
+
+py_min, py_max = min, max
+from cv2 import *
 
 try:
     import torchvision as tv
@@ -14,6 +17,14 @@ except ImportError as e:
     pass
 else:
     tv.set_image_backend('accimage')
+
+## Image Pixel Format
+
+'''
+CV2 BGR: uint8 in HWC ndarray
+PIL RGB: uinit8 in HWC ndarray
+torch RGB: float in CHW tensor
+'''
 
 ## Essential OpenCV
 
@@ -60,7 +71,16 @@ def loadBGR(path):
     return None if src.ndim == 0 else src
 
 def imread(path, nc=3):
-    return loadGrayscale(path) if nc == 1 else loadBGR(path)
+    """Load image(s) from path(s).
+    Args:
+        path(str | list[str]): path(s) to image(s) to read
+    Returns:
+        output(BGR | list[BGR]): an BGR image or list of images
+    """
+    if isinstance(path, (str, Path)):
+        return loadGrayscale(path) if nc == 1 else loadBGR(path)
+    elif isinstance(path, list):
+        return [loadGrayscale(p) if nc == 1 else loadBGR(p) for p in path]
 
 def fromTorch(src):
     r"""
@@ -103,7 +123,83 @@ def resize(img, scale=1, width=0, height=0, interpolation=INTER_LINEAR, **kwargs
         else:
             return cv2.resize(img, None, fx=scale, fy=scale, interpolation=interpolation)
 
-def show(img, scale=1, title='', **kwargs):
+def letterbox(img, size=608, color=114, minimal=True, stretch=False, upscaling=True):
+    """Resize and pad to the new shape.
+    Args:
+        img(BGR): CV2 BGR image
+        size[416 | 512 | 608 | 32*]: target long side to resize to in multiples of 32
+        color(tuple): Padding color
+        minimal(bool): Padding up to the short side or not
+        stretch(bool): Scale the short side without keeping the aspect ratio
+        upscaling(bool): Allows to scale up or not
+    """
+    # Resize image to a multiple of 32 pixels on both sides 
+    # https://github.com/ultralytics/yolov3/issues/232
+    color = isinstance(color, int) and (color,) * img.shape[-1] or color
+    shape = img.shape[:2]
+    if isinstance(size, int):
+        size = (size, size)
+
+    r = py_min(size[0] / shape[0], size[1] / shape[1])
+    if not upscaling: 
+        # Only scale down but no scaling up for better test mAP
+        r = py_min(r, 1.0)
+
+    # Compute padding
+    ratio = r, r
+    new_unpad = int(round(shape[1] * r)), int(round(shape[0] * r))  # actual size to scale to (w, h)
+    dw, dh = size[1] - new_unpad[0], size[0] - new_unpad[1]         # padding on sides
+    if minimal: 
+        # Padding up to 64 for the short side
+        dw, dh = dw % 64, dh % 64
+    elif stretch:  
+        # Stretch the short side to the exact target size
+        dw, dh = 0.0, 0.0
+        new_unpad = size
+        ratio = size[0] / shape[0], size[1] / shape[1]
+
+    dw /= 2
+    dh /= 2
+    if shape[::-1] != new_unpad:
+        img = resize(img, width=new_unpad[0], height=new_unpad[1])
+    
+    # Fractional to integral padding
+    top, bottom = int(round(dh - 0.1)), int(round(dh + 0.1))
+    left, right = int(round(dw - 0.1)), int(round(dw + 0.1))
+    resized = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)
+    return resized, dict(
+        shape=shape,        # HxW
+        offset=(top, left), # H, W
+        ratio=ratio,        # H, W
+    )
+
+def grid(images, size=608, color=114):
+    """Load images in a grid.
+    Args:
+        images(list[BGR]): list of BGR images
+        size(int): target grid cell resolution to resize and pad
+        color(int or tuple): color to pad
+    """
+    assert isinstance(images, list) and all([isinstance(img, np.ndarray) for img in images])
+    import random
+    from . import math
+    min, max = py_min, py_max
+    gh, gw = math.factorize(len(images))
+    tiles = np.full((size * gh, size * gw, images[0].shape[-1]), 114, dtype=np.uint8)
+    metas = []
+    for i, img in enumerate(images):
+        # Pack img at the mosaic center
+        ih = i // gw
+        iw = i % gw
+        y1, x1 = ih * size, iw * size
+        img, meta = letterbox(img, size, minimal=False)
+        tiles[y1:y1+size, x1:x1+size] = img[:, :]  # img4[ymin:ymax, xmin:xmax]
+        top, left = meta['offset']
+        meta['offset'] = (y1+top, x1+left)
+        metas.append(meta)
+    return tiles, metas
+
+def imshow(img, scale=1, title='', **kwargs):
     import torch
     if type(img) is list and isTorch(img[0]):
         img = torch.cat(img, 2)
@@ -115,11 +211,30 @@ def show(img, scale=1, title='', **kwargs):
     if isinstance(img, Image.Image):
         img.show()
     else:
-        imshow(title, img)
+        cv2.imshow(title, img)
         waitKey(0)
         destroyAllWindows()
 
 # OpenCV only
+
+def drawBox(img, xyxy, color=None, label=None, thickness=None):
+    tl = thickness or round(0.002 * (img.shape[0] + img.shape[1]) / 2) + 1
+    color = color or [random.randint(0, 255) for _ in range(3)]
+    c1, c2 = (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2]), int(xyxy[3]))
+    cv2.rectangle(img, c1, c2, color, thickness=tl, lineType=cv2.LINE_AA)
+    if label:
+        tf = py_max(tl - 1, 1)
+        t_size = cv2.getTextSize(label, 0, fontScale=tl / 3, thickness=tf)[0]
+        c2 = c1[0] + t_size[0], c1[1] - t_size[1] - 3
+        cv2.rectangle(img, c1, c2, color, -1, cv2.LINE_AA)
+        cv2.putText(img, label, (c1[0], c1[1] - 2), 0, tl / 3, [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA)
+
+def drawBoxes(img, boxes, colors=None, labels=None, scores=None):
+    for i, box in enumerate(boxes):
+        label = None
+        if labels:
+            label = labels[i] if scores is None else f"{labels[i]} {scores[i]:.2f}"
+        drawBox(img, box, color=colors and colors[i] or None, label=label)
 
 def drawLine(img, x1, y1, x2, y2):
     line(img, (x1, y1), (x2, y2), FG, 1)

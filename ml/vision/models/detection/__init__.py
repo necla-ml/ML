@@ -1,3 +1,3 @@
 from .detector import *
-from .yolo import YOLOv4
+from .yolo import YOLO
 from . import yolo
