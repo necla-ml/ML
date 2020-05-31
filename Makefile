@@ -120,5 +120,9 @@ tag: require-version
 	git tag -a v$(version) -m v$(version) 
 	git push origin tags/v$(version)
 
+del-tag:
+	git tag -d $(tag)
+	git push origin --delete tags/$(tag)
+
 release:
 	git checkout $(git describe --abbrev=0 --tags)
