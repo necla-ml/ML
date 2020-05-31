@@ -31,8 +31,8 @@ requirements:
     - setuptools
 {{ environ.get('CONDA_CUDATOOLKIT_CONSTRAINT') }}
   run:
-    - accimage>=0.1.1           [not osx]
-    - av
+    - accimage>=0.1.1           # [not osx]
+    - av>=8.0.1
     - blosc-hdf5-plugin
     - conda                     # [not osx]        # implicitly required by cudatoolkit-dev=10.0.*
     - conda-build
