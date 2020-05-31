@@ -19,6 +19,8 @@ build:
 
 requirements:
   host:
+    - gcc_linux-64  # [linux]
+    - gxx_linux-64  # [linux]
     - h5py
     - ignite
     - numexpr
