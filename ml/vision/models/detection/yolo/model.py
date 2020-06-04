@@ -132,7 +132,7 @@ class YOLO(nn.Module):
         self.cfg = Config(cfg)
         self.routed = routed
         self.stages = modules
-        self.pooled = []
+        self.features = []
         self.logits = []
         self.debug = debug
         if self.debug:
@@ -194,7 +194,7 @@ class YOLO(nn.Module):
         height, width = x.shape[-2:]
         predictions = []    # head predictions
         outputs = []        # per layer output
-        self.pooled.clear()
+        self.features.clear()
         self.logits.clear()
         if verbose:
             logging.info(f'x.shape: {list(x.shape)}')
@@ -220,7 +220,7 @@ class YOLO(nn.Module):
                 if self.debug:
                     logging.info(f"[{i}] {name} output shape={tuple(x.shape)}, sum={x.sum():.3f}")
             elif name == 'YOLOHead':
-                self.pooled.append(outputs[-2])
+                self.features.append(outputs[-2])
                 self.logits.append(x)
                 predictions.append(module(x))
             else:  

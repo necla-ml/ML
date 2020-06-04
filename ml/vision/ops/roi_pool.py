@@ -7,8 +7,8 @@ from torch.nn.modules.utils import _pair
 from torch.autograd import Function
 from torch.autograd.function import once_differentiable
 
-from ..extension import _lazy_import
-from .. import math
+from ...extension import _lazy_import
+from ... import math
 from .utils import boxes2rois
 
 

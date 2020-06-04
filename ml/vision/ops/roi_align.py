@@ -6,7 +6,7 @@ from torch.autograd.function import once_differentiable
 
 from torch.nn.modules.utils import _pair
 
-from ..extension import _lazy_import
+from ...extension import _lazy_import
 from .utils import boxes2rois
 
 
@@ -50,8 +50,8 @@ def roi_align(input, boxes, output_size, spatial_scale=1.0, sampling_ratio=-1):
             in a batch
         output_size (int or Tuple[int, int]): the size of the output after the cropping
             is performed, as (height, width)
-        spatial_scale (float): a scaling factor that maps the input coordinates to
-            the box coordinates. Default: 1.0
+        spatial_scale (float, Tuple[x_scale, y_scale]): a scaling factor or a tuple to map input coordinates to
+            the box coordinates.
         sampling_ratio (int): number of sampling points in the interpolation grid
             used to compute the output value of each pooled output bin. If > 0,
             then exactly sampling_ratio x sampling_ratio grid points are used. If

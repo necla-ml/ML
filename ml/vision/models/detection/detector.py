@@ -137,10 +137,11 @@ class Detector(nn.Module):
         pass
 
 class YOLODetector(Detector):
-    def __init__(self, cfg='yolov4.cfg', weights='yolov4.weights', device=None):
+    def __init__(self, cfg='yolov4.cfg', weights='yolov4.weights', device=None, fuse=True):
         from ml.vision.models import YOLO
         import torch
         model = YOLO.create(cfg, weights)
+        fuse and model.fuse()
         device = device or (torch.cuda.is_available() and "cuda" or "cpu")
         super().__init__(model.to(device))
 
