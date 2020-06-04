@@ -79,7 +79,7 @@ test:
   imports:
     - ml.av
     - ml.cv
-    - ml.ops
+    - ml.vision.ops
   commands:
     - $PYTHON -c 'import torch; import ml._C'  
 
