@@ -59,6 +59,9 @@ conda-clean:
 setup-mmdet:
 	cd submodules/mmdetection; pip install -e .
 
+setup-deep_sort:
+	ln -sf ../../submodules/deep_sort ml/ops
+
 dev:
 	git config --global credential.helper cache --timeout=21600
 	git checkout dev
@@ -109,6 +112,23 @@ co: checkout
 pull: co
 	# git submodule update --remote --merge --recursive
 	git pull
+
+pull-deep-sort:
+	cd submodules/deep_sort; \
+		git pull; \
+		git remote add upstream https://github.com/nwojke/deep_sort; \
+		git fetch upstream; \
+		git checkout master; \
+		git merge upstream/master;
+
+co-mmdet:
+	cd submodules/mmdetection; \
+		git pull; \
+		git remote add upstream https://github.com/open-mmlab/mmdetection; \
+		git fetch --tags upstream; \
+		git checkout master; \
+		git merge v2.0.0; \
+		git checkout v2.0.0
 
 merge:
 	git checkout master
