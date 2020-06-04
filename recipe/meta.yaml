@@ -18,9 +18,10 @@ build:
 {{ environ.get('CONDA_CPUONLY_FEATURE') }}
 
 requirements:
+  build:
+#    - gcc_linux-64  # [linux]
+#    - gxx_linux-64  # [linux]
   host:
-    - gcc_linux-64  # [linux]
-    - gxx_linux-64  # [linux]
     - h5py
     - ignite
     - numexpr
