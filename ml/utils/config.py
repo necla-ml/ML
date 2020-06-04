@@ -118,7 +118,10 @@ class Config(dict):
     def update(self, other=None):
         for key, value in other.items():
             if isinstance(value, Mapping):
-                self[key] = self.get(key, Config()).update(value)
+                if self[key] is None:
+                    self[key] = Config(value)
+                else:
+                    self[key].update(value)
             else:
                 self[key] = value
         return self
