@@ -158,6 +158,10 @@ class YOLO(nn.Module):
         logging.info(f"Fused {fused} convolutional stages with 2D BN")
 
     def forward(self, x, augment=False, verbose=False):
+        """
+        Returns:
+            predictions(Tensor[B,K,4+1+80]): predictions in xyxysc from different anchors
+        """
         return self.forward_once(x)
         '''
         if not augment:

@@ -5,18 +5,18 @@ from pathlib import Path
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor, AnchorGenerator, TwoMLPHead
 from torchvision.models.detection import maskrcnn_resnet50_fpn
 from torchvision.models.detection import MaskRCNN
-from torchvision.ops import MultiScaleRoIAlign
 import torch as th
 
 from .... import nn, random, sys, logging
+from ...ops import MultiScaleFusionRoIAlign
 from ...datasets import coco
 from .. import backbone
 
 COLORS91 = [[random.randint(0, 255) for _ in range(3)] for _ in range(len(coco.COCO91_CLASSES))]
 COLORS80 = [COLORS91[coco.COCO80_TO_91[i]] for i in range(len(coco.COCO80_CLASSES))]
 
-def yolo4(pretrained=True):
-    return YOLODetector()
+def yolo4(**kwargs):
+    return YOLODetector(**kwargs)
 
 def mask_rcnn(pretrained=False, num_classes=1+90, representation=1024, backbone=None, with_mask=True, **kwargs):
     if backbone is None:
@@ -137,13 +137,14 @@ class Detector(nn.Module):
         pass
 
 class YOLODetector(Detector):
-    def __init__(self, cfg='yolov4.cfg', weights='yolov4.weights', device=None, fuse=True):
+    def __init__(self, cfg='yolov4.cfg', weights='yolov4.weights', device=None, fuse=True, pooling=False):
         from ml.vision.models import YOLO
         import torch
         model = YOLO.create(cfg, weights)
         fuse and model.fuse()
         device = device or (torch.cuda.is_available() and "cuda" or "cpu")
         super().__init__(model.to(device))
+        self.pooler = MultiScaleFusionRoIAlign(3) if pooling else None
 
     @property
     def with_det(self):
@@ -170,14 +171,23 @@ class YOLODetector(Detector):
             conf_thres = kwargs.get('conf_thres', 0.3),
             iou_thres = kwargs.get('iou_thres', 0.6),
             agnostic = kwargs.get('agnostic', False),
-            merge = kwargs.get('agnostic', True),
+            merge = kwargs.get('merge', True),
         )
         batch, metas = yolo.preprocess(images, size=size)
         with th.no_grad():
             predictions = model(batch.to(dev))
-        results = yolo.postprocess(metas, predictions, **cfg)
+        dets = yolo.postprocess(predictions, metas, **cfg)
         self.train(mode)
-        return (results, model.pooled) if pooling else results
+        if self.pooler is None:
+            return dets
+        else:
+            # print("dets:", dets)
+            # print([feats.shape for feats in model.features])
+            with th.no_grad():
+                pooled = self.pooler(model.features, dets, metas)
+            # print("pooled:", len(pooled), [feats.shape for feats in pooled], len(dets), [rois.shape for rois in dets])
+            # print(dets)
+            return dets, pooled
     
     def forward(self, images, targets=None):
         raise NotImplementedError
@@ -193,7 +203,7 @@ class YOLODetector(Detector):
         """Visualize the detection on the image and optionally save to a file.
         Args:
             img(BGR): CV2 BGR.
-            result(Tensor): detection result in [x1, y1, x2, y2, score, class]
+            result(Tensor[K, 6]): detection result in [x1, y1, x2, y2, score, class]
             classes(list[str] or tuple[str]): A list of trained class names
             score_thr(float): The threshold to visualize the bboxes and masks.
             wait_time (int): Value of waitKey param for display

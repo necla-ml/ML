@@ -1,40 +1,29 @@
 from torchvision.ops.boxes import *
-import torch
 
-def xywh2xyxy(x, inplace=False):
-    """Convert Nx4 boxes from center, width and height to top-left and bottom-right coordinates.
-    Args:
-        x(Tensor[N, 4]): N boxes in the format [centerX, centerY, width, height]
-        inplace(bool): whether to modify the input inplace as output or make the results a new copy
-
-    Returns:
-        boxes(Tensor[N, 4]): N boxes in the format of [x1, y1, x2, y2]
+def clip_boxes_to_image(boxes, size):
+    # type: (Tensor, Tuple[int, int]) -> Tensor
     """
-    y = torch.zeros_like(x)
-    y[:, 0] = x[:, 0] - x[:, 2] / 2  # top left x
-    y[:, 1] = x[:, 1] - x[:, 3] / 2  # top left y
-    y[:, 2] = x[:, 0] + x[:, 2] / 2  # bottom right x
-    y[:, 3] = x[:, 1] + x[:, 3] / 2  # bottom right y
-    if inplace:
-        x.copy_(y)
-        return x
-    return y
-
-def xyxy2xywh(x, inplace=False):
-    """Convert Nx4 boxes from top-left and bottom-right coordinates to center, width and height
-    Args:
-        x(Tensor[N, 4]): N boxes in the format [x1, y1, x2, y2]
-        inplace(bool): whether to modify the input inplace as output or make the results a new copy
-
+    Clip boxes so that they lie inside an image of size `size`.
+    Arguments:
+        boxes (Tensor[N, 4]): boxes in (x1, y1, x2, y2) format
+        size (Tuple[height, width]): size of the image
     Returns:
-        boxes(Tensor[N, 4]): N boxes in the format of [centerX, centerY, width, height]
+        clipped_boxes (Tensor[N, 4])
     """
-    y = torch.zeros_like(x)
-    y[:, 0] = (x[:, 0] + x[:, 2]) / 2   # centerX
-    y[:, 1] = (x[:, 1] + x[:, 3]) / 2   # centerY
-    y[:, 2] = x[:, 2] - x[:, 0]         # width
-    y[:, 3] = x[:, 3] - x[:, 1]         # height
-    if inplace:
-        x.copy_(y)
-        return x
-    return y
+    dim = boxes.dim()
+    boxes_x = boxes[..., 0::2]
+    boxes_y = boxes[..., 1::2]
+    height, width = size
+
+    if torchvision._is_tracing():
+        boxes_x = torch.max(boxes_x, torch.tensor(0, dtype=boxes.dtype, device=boxes.device))
+        boxes_x = torch.min(boxes_x, torch.tensor(width, dtype=boxes.dtype, device=boxes.device))
+        boxes_y = torch.max(boxes_y, torch.tensor(0, dtype=boxes.dtype, device=boxes.device))
+        boxes_y = torch.min(boxes_y, torch.tensor(height, dtype=boxes.dtype, device=boxes.device))
+    else:
+        # FIXME max must not exceed the boundaries
+        boxes_x = boxes_x.clamp(min=0, max=width-1)
+        boxes_y = boxes_y.clamp(min=0, max=height-1)
+
+    clipped_boxes = torch.stack((boxes_x, boxes_y), dim=dim)
+    return clipped_boxes.reshape(boxes.shape)

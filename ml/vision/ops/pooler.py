@@ -4,7 +4,8 @@ from torch.nn import functional as F
 from torchvision.ops import *
 
 from ml import logging
-from ml.vision.ops import roi_align
+from .roi_align import roi_align
+from .utils import rois2boxes
 
 class MultiScaleFusionRoIAlign(nn.Module):
     def __init__(self, output_size, spatial_scale=1.0, sampling_ratio=-1):
@@ -21,25 +22,49 @@ class MultiScaleFusionRoIAlign(nn.Module):
         self.spatial_scale = spatial_scale
         self.sampling_ratio = sampling_ratio
 
-    def forward(self, x, boxes, shapes):
+    def forward(self, x, boxes, metas):
         """
         Args:
-            x (List[List[Tensor]]): list of feature map lists.
-            boxes (List[Tensor[N, 4]]): boxes for the pooling operation in (x1, y1, x2, y2) w.r.t. image size.
-            shapes (List[Tuple[height, width]]): the sizes of each image input.
+            x (List[Tensor]): list of batch multi-scale feature maps from small scale to largest.
+            boxes(List[Tensor[N, 4]] or Tensor[K, 5]): list of boxes to pool w.r.t. original image sizes.
+            metas(List[dict]): the preprocessing params w.r.t. original shape, resize ratio, padding offsets
         Returns:
-            features (List[Tensor[N, C]]): list of pooled RoI features in a batch
+            aligned(List[Tensor[K, C, OH, OW]]): list of pooled RoI features w.r.t. boxes
         """
-        pooled = []
-        for (features, shape) in zip(x, shapes):
-            size = features[0].shape[2:]
-            resampled = [features[0]]
-            for i, feats in enumerate(features[1:], 1):
-                interpolated = F.interpolate(feats, scale_factor=2 ** i, mode='bilinear', align_corners=False)
-                resampled.append(interpolated)
-                # logging.info(f"interploation: from {tuple(feats.shape)} to {tuple(interpolated.shape)}")
-            features = torch.cat(resampled, 1)
-            # logging.info(f"pooled shape: {tuple(pooled[-1].shape)}")
-            aligned = roi_align(features, boxes, self.output_size, spatial_scale=(size[1]/shape[1], size[0]/shape[0]))
-            pooled.append(aligned)
-        return pooled
+        size = x[0].shape[2:]
+        resampled = [x[0]]
+        for i, feats in enumerate(x[1:], 1):
+            interpolated = F.interpolate(feats, scale_factor=2 ** i, mode='bilinear', align_corners=False)
+            resampled.append(interpolated)
+            # logging.info(f"interploation from {tuple(feats.shape)} to {tuple(interpolated.shape)}")
+        batch = torch.cat(resampled, 1)
+
+        # XXX pooling w.r.t. the resized/padded image sizes
+        rois = boxes
+        if torch.is_tensor(boxes):
+            rois = rois2boxes(rois, len(metas))
+        rois_rp = []
+        scale = None
+        for dets, meta in zip(rois, metas):
+            rH, rW = meta['ratio']
+            top, left = meta['offset']
+            dets_rp = dets[:, :4].clone()
+            dets_rp[:, [0, 2]] *= rW
+            dets_rp[:, [1, 3]] *= rH
+            dets_rp[:, [0, 2]] += left
+            dets_rp[:, [1, 3]] += top
+            rois_rp.append(dets_rp)
+            if scale is None:
+                shape = list(meta['shape'])
+                shape[0] *= rH
+                shape[1] *= rW
+                shape[0] = int(shape[0] + 2 * top)
+                shape[1] = int(shape[1] + 2 * left)
+                scale = (size[1]/shape[1], size[0]/shape[0])
+        aligned = roi_align(batch, rois_rp, self.output_size, spatial_scale=scale)
+        offset = 0
+        alignedL = []
+        for dets in rois:
+            alignedL.append(aligned[offset:offset+len(dets)])
+            offset += len(dets)
+        return alignedL

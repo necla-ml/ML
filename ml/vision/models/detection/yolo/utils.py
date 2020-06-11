@@ -46,7 +46,7 @@ def parse(cfg):
     assert not u, f"Unsupported fields {u} in {cfg}. See https://github.com/ultralytics/yolov3/issues/631"
     return mdefs
 
-def preprocess(image, size=608):
+def preprocess(image, size=608, **kwargs):
     """Sequential preprocessing of input images for YOLO
     Args:
         image(str | list[str] | ndarray | list[ndarray]): image filename(s) or CV2 BGR image(s)
@@ -63,8 +63,9 @@ def preprocess(image, size=608):
         images = cv.imread(images)
     resized = []
     metas = []
+    minimal = len(images) == 1
     for img in images:
-        img, meta = cv.letterbox(img, size=size)
+        img, meta = cv.letterbox(img, size=size, minimal=minimal)
         resized.append(cv.toTorch(img))
         metas.append(meta)
     return torch.stack(resized), metas
@@ -84,7 +85,7 @@ def batched_nms(predictions,
         multi_label(bool): whether to select mulitple class labels above the threshold or just the max
         classes(list | tuple): class ids of interest to retain
     Returns:
-        output(B, N, 6): list of detections per image in (x1, y1, x2, y2, conf, cls)
+        output(List[Tensor[B, N, 6]]): list of detections per image in (x1, y1, x2, y2, conf, cls)
     """
     min_wh, max_wh = 2, 4096                                        # minimum and maximum box width and height
     B, _, nc = predictions.shape
@@ -100,8 +101,8 @@ def batched_nms(predictions,
         # Compute resulting class scores = anchor * class
         x[..., 5:] *= x[..., 4:5]
 
-        # Box (center x, center y, width, height) to (x1, y1, x2, y2)
-        boxes = xywh2xyxy(x[:, :4])
+        # xcycwh to xyxy
+        boxes = xcycwh2xyxy(x[:, :4].round())
 
         # Single or multi-label boxes
         if multi_label:
@@ -137,17 +138,17 @@ def batched_nms(predictions,
         output[b] = x[keep]
     return output
 
-def postprocess(metas, predictions, 
+def postprocess(predictions, metas, 
                 conf_thres=0.3, iou_thres=0.6, 
                 agnostic=False, merge=True, 
                 multi_label=False, classes=None):
     """Post-process to restore predictions on pre-processed images back.
     Args:
-        images(list[BGR]):
+        predictions(Tensor[B,K,4+1+80]): batch output predictions from YOLO
     """
-    results = [None] * len(predictions)
+    dets = [None] * len(predictions)
     predictions = batched_nms(predictions, conf_thres, iou_thres, agnostic, merge, multi_label, classes)
-    for b, (meta, pred) in enumerate(zip(metas, predictions)):
+    for b, (pred, meta) in enumerate(zip(predictions, metas)):
         if pred is None or len(pred) == 0:
             continue
         # Shift back
@@ -160,5 +161,5 @@ def postprocess(metas, predictions,
         pred[:, [1, 3]] /= rH
         # Clip boxes
         pred[:, :4] = clip_boxes_to_image(pred[:, :4].round(), meta['shape'])
-        results[b] = pred.cpu()
-    return results
+        dets[b] = pred
+    return dets
