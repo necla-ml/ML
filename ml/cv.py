@@ -132,6 +132,9 @@ def letterbox(img, size=608, color=114, minimal=True, stretch=False, upscaling=T
         minimal(bool): Padding up to the short side or not
         stretch(bool): Scale the short side without keeping the aspect ratio
         upscaling(bool): Allows to scale up or not
+    Returns:
+        resized(BGR): resized and/or padded image
+        meta(dict): original shape, padding offsets and scaling ratio
     """
     # Resize image to a multiple of 32 pixels on both sides 
     # https://github.com/ultralytics/yolov3/issues/232
@@ -146,7 +149,7 @@ def letterbox(img, size=608, color=114, minimal=True, stretch=False, upscaling=T
         r = py_min(r, 1.0)
 
     # Compute padding
-    ratio = r, r
+    ratio = (r, r)
     new_unpad = int(round(shape[1] * r)), int(round(shape[0] * r))  # actual size to scale to (w, h)
     dw, dh = size[1] - new_unpad[0], size[0] - new_unpad[1]         # padding on sides
     if minimal: 
@@ -156,7 +159,7 @@ def letterbox(img, size=608, color=114, minimal=True, stretch=False, upscaling=T
         # Stretch the short side to the exact target size
         dw, dh = 0.0, 0.0
         new_unpad = size
-        ratio = size[0] / shape[0], size[1] / shape[1]
+        ratio = (size[0] / shape[0], size[1] / shape[1])
 
     dw /= 2
     dh /= 2
