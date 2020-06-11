@@ -7,8 +7,7 @@ from torch.autograd.function import once_differentiable
 from torch.nn.modules.utils import _pair
 
 from ...extension import _lazy_import
-from .utils import boxes2rois
-
+from .utils import boxes2rois, check_roi_boxes_shape
 
 class _RoIAlignFunction(Function):
     @staticmethod
@@ -61,6 +60,7 @@ def roi_align(input, boxes, output_size, spatial_scale=1.0, sampling_ratio=-1):
     Returns:
         output (Tensor[K, C, output_size[0], output_size[1]])
     """
+    check_roi_boxes_shape(boxes)
     rois = boxes
     if not isinstance(rois, th.Tensor):
         rois = boxes2rois(rois)
