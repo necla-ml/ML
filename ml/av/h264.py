@@ -17,6 +17,7 @@ class NALU_t(IntEnum):
     SEI = 6
     SPS = 7
     PPS = 8
+    AUD = 9 # Dahua
 
 def parseNALUHeader(header):
     forbidden = (header & 0x80) >> 7
@@ -24,7 +25,7 @@ def parseNALUHeader(header):
     type = (header & 0x1F)
     return forbidden, ref_idc, type
 
-def NALUParser(bitstream, workaround=False):
+def NALUParser(bitstream):
     '''
     Args:
         bitstream: a writable bytes-like object that incurs zero copy for slicing
@@ -40,15 +41,17 @@ def NALUParser(bitstream, workaround=False):
         next32 = bitstream[pos:pos+4]
         if next24 == START_CODE24:
             if start < pos:
-                if workaround and bitstream[pos - 1] == 0x00:
-                    # FIXME Three consecutive zero bytes may be rejected by e.g. KVS
-                    # - encoder forgot to set the stop bit to 1
-                    # - encoder forgot to insert an additional byte with MSB set to 1
-                    bitstream[pos - 1] = 0x01
-                    logging.warning(f"In-place mutation to work around three consecutive zeros at pos {pos - 1}")
                 count += 1
                 header = bitstream[start+start24or32]
-                yield (start, *parseNALUHeader(header)), bitstream[start:pos]
+                trailing0 = 0
+                # FIXME Three consecutive zero bytes may be rejected by e.g. KVS
+                # - encoder simply inserts an additionoal zero byte
+                # - encoder forgot to set the stop bit to 1
+                # - encoder forgot to insert an additional byte with MSB set to 1
+                while bitstream[pos - 1 - trailing0] == 0x00:
+                    trailing0 += 1
+                    logging.warning(f"Skip NALU trailing zero byte at pos {pos - 1 - trailing0}")
+                yield (start, *parseNALUHeader(header)), bitstream[start:pos - trailing0]
             start24or32 = 24 // 8
             start = pos
             pos += start24or32
@@ -59,14 +62,16 @@ def NALUParser(bitstream, workaround=False):
                 pos = len(bitstream)
         elif next32 == START_CODE32:
             if start < pos:
-                if workaround and bitstream[pos - 1] == 0x00:
-                    # FIXME Three consecutive zero bytes may be rejected by e.g. KVS
-                    # - encoder forgot to set the stop bit to 1
-                    # - encoder forgot to insert an additional byte with MSB set to 1
-                    bitstream[pos - 1] = 0x01
-                    logging.warning(f"In-place mutation to work around three consecutive zeros at pos {pos - 1}")
                 header = bitstream[start + start24or32]
-                yield (start, *parseNALUHeader(header)), bitstream[start:pos]
+                trailing0 = 0
+                # FIXME Three consecutive zero bytes may be rejected by e.g. KVS
+                # - encoder simply inserts an additionoal zero byte
+                # - encoder forgot to set the stop bit to 1
+                # - encoder forgot to insert an additional byte with MSB set to 1
+                while bitstream[pos - 1 - trailing0] == 0x00:
+                    trailing0 += 1
+                    logging.warning(f"Skip NALU trailing zero byte at pos {pos - 1 - trailing0}")
+                yield (start, *parseNALUHeader(header)), bitstream[start:pos - trailing0]
             start24or32 = 32 // 8
             start = pos
             pos += start24or32
@@ -82,16 +87,16 @@ def NALUParser(bitstream, workaround=False):
         header = bitstream[start+start24or32]
         yield (start, *parseNALUHeader(header)), bitstream[start:pos]
 
+# FIXME deprecated since some NALUs must be filtered out or trimmed in place
 class H264Framer(object):
-    def __init__(self, bitstream, workaround=False):
+    def __init__(self, bitstream):
         '''
         Args:
             bitstream: an object that implements the bitstreamfer protocol
         '''
         super(H264Framer, self).__init__()
-        self.workaround = workaround
         self.bitstream = memoryview(bitstream)
-        self.parser = NALUParser(self.bitstream, workaround)
+        self.parser = NALUParser(self.bitstream)
 
     def __iter__(self):
         return self
