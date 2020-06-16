@@ -6,6 +6,7 @@ from torchvision.models.detection.faster_rcnn import FastRCNNPredictor, AnchorGe
 from torchvision.models.detection import maskrcnn_resnet50_fpn
 from torchvision.models.detection import MaskRCNN
 import torch as th
+import numpy as np
 
 from .... import nn, random, sys, logging
 from ...ops import MultiScaleFusionRoIAlign
@@ -137,14 +138,23 @@ class Detector(nn.Module):
         pass
 
 class YOLODetector(Detector):
-    def __init__(self, cfg='yolov4.cfg', weights='yolov4.weights', device=None, fuse=True, pooling=False):
+    def __init__(self, cfg='yolov4.cfg', weights='yolov4.weights', device=None, fuse=True, pooling=0):
+        """
+        Args:
+            cfg(str): configuration name to download if unavailable
+            weights(str): pretrained weights name to download if unavailable
+            device(str or torch.device): target device to host the model
+            fuse(bool): whether to fuse convolutional and BN
+            pooling(int): output RoI feature pooing size if greater than 0
+        """
         from ml.vision.models import YOLO
         import torch
         model = YOLO.create(cfg, weights)
         fuse and model.fuse()
         device = device or (torch.cuda.is_available() and "cuda" or "cpu")
         super().__init__(model.to(device))
-        self.pooler = MultiScaleFusionRoIAlign(3) if pooling else None
+        self.pooler = MultiScaleFusionRoIAlign(isinstance(pooling, bool) and 2 or pooling) if pooling else None
+        logging.info(f"Multi-scale pooling size={self.pooler.output_size}")
 
     @property
     def with_det(self):
@@ -203,23 +213,40 @@ class YOLODetector(Detector):
         """Visualize the detection on the image and optionally save to a file.
         Args:
             img(BGR): CV2 BGR.
-            result(Tensor[K, 6]): detection result in [x1, y1, x2, y2, score, class]
+            result(Tensor[K, 6] or List[(tid, Tensor[6]))+]): detection result in [x1, y1, x2, y2, score, class]
             classes(list[str] or tuple[str]): A list of trained class names
             score_thr(float): The threshold to visualize the bboxes and masks.
+            tracking(bool): Whether the results are tracking
             wait_time (int): Value of waitKey param for display
             path(str, optional): path to save the rendered image
         """
         from ml import cv
-        result = result[result[:, 4] >= score_thr]
-        labels = [classes[c.int()] for c in result[:, 5]]
-        scores = [f"{s*100:.2f}%" for s in result[:, 4]]
-        colors = [COLORS80[c.int()] for c in result[:, 5]]
-        cv.drawBoxes(img, result[:, :4], labels=labels, scores=result[:, 4], colors=colors)
+        labels = colors = None
+        img = np.ascontiguousarray(img)
+        if th.is_tensor(result):
+            # Detection only
+            result = result[result[:, 4] >= score_thr]
+            labels = [classes[c.int()] for c in result[:, 5]]
+            colors = [COLORS80[c.int()] for c in result[:, 5]]
+            cv.drawBoxes(img, result[:, :4], labels=labels, scores=result[:, 4], colors=colors)
+        elif result:
+            # Detection with tracking [(tid, xyxysc)*]
+            tids, boxes = list(zip(*result))
+            result = th.stack(boxes)
+            assert len(result[:, 4] >= score_thr) == len(result)
+            result = result[result[:, 4] >= score_thr]
+            labels = [f"{classes[c.int()]}[{tid}]" for tid, c in zip(tids, result[:, 5])]
+            colors = [COLORS80[c.int()] for c in result[:, 5]]
+            cv.drawBoxes(img, result[:, :4], labels=labels, scores=result[:, 4], colors=colors)
+            logging.info(f"tracking {tuple(labels)}")
+        else:
+            logging.info(f"No RoIs to render")
         path = path and Path(path) or None
         if sys.x_available() and show:
             cv.imshow(img, title=path or '')
         if path:
             cv.save(img, path)
+        return img
 
 class THDetector(Detector):
     def __init__(self, model):
