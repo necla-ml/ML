@@ -208,6 +208,49 @@ def grid(images, size=608, color=114, padding=(100, 100)):
 
     return tiles, metas
 
+def ungrid(grid_image, meta_lst, index_only=True):
+    """Get images from grid
+    Args:
+        grid_image(np.ndarray): grid image 
+        meta_lst(list): list of meta data
+        index_only(bool): return entire image or image co-ordinates only
+    Returns:
+        list of image indexes for respective images or numpy image
+    """
+    assert isinstance(grid_image, np.ndarray) and isinstance(meta_lst, list)
+    import random
+    from ml import math
+
+    no_of_images = len(meta_lst)
+    
+    gh, gw = math.factorize(no_of_images)
+
+    images = []
+
+    y2_meta = meta_lst[0]['offset'][0]
+    x2_meta = meta_lst[0]['offset'][1]
+
+    for i, meta in enumerate(meta_lst):
+
+        size = meta['shape'][0] * no_of_images
+
+        ih = i // gw
+        iw = i % gw
+
+        y2, x2 = ih * size, iw * size
+        y1 = meta['offset'][0]
+        y2 = y2 + size - y2_meta
+        x1 = meta['offset'][1]
+        x2 = x2 + size - x2_meta
+        if index_only:
+            images.append((y1, y2, x1, x2))
+        else:
+            img = grid_image[y1:y2, x1:x2, :]
+            images.append(img)
+
+    return images
+       
+
 def imshow(img, scale=1, title='', **kwargs):
     import torch
     if type(img) is list and isTorch(img[0]):
