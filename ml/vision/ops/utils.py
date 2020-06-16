@@ -141,3 +141,28 @@ def xyxy2xcycwh(xyxy, inplace=False):
         xyxy.copy_(xcycwh)
         return xyxy
     return xcycwh
+
+def xyxy2xywh(xyxy, inplace=False):
+    """Convert bbox from (x1,y1,x2,y2) to (x1,y1,w,h).
+    """
+    if inplace:
+        xywh = xyxy
+    else:
+        xywh = xyxy.clone()
+    xywh[:, 2] = xyxy[:, 2] - xyxy[:, 0] + 1
+    xywh[:, 3] = xyxy[:, 3] - xyxy[:, 1] + 1
+    return xywh
+
+def xywh2xyxy(xywh, inplace=False):
+    """Convert bbox from (x1,y1,w,h) to (x1,y1,x2,y2).
+    """
+    if inplace:
+        xyxy = xywh
+    else:
+        xyxy = xywh.clone()
+    if xywh.dim() == 1:
+        xywh = xywh.unsqueeze(0)
+        xyxy.unsqueeze_(0)
+    xyxy[:, 2] = xywh[:, 0] + xywh[:, 2] - 1
+    xyxy[:, 3] = xywh[:, 1] + xywh[:, 3] - 1
+    return xyxy.squeeze_()

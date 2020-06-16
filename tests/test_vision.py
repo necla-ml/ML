@@ -165,7 +165,7 @@ def test_yolo(path):
     img = cv.imread(path)
     img2 = cv.resize(img, scale=0.5)
     detector = yolo4(fuse=True, pooling=True)
-    dets, features = detector.detect([img, img2], size=608, pooling=True)
+    dets, features = detector.detect([img, img2], size=608)
     print([det.shape for det in dets], [feats.shape for feats in features])
     assert len(dets) == 2
     assert dets[0].shape[1] == 4+1+1
@@ -178,25 +178,60 @@ def test_yolo(path):
 def video():
     import os
     return os.path.join(os.environ['HOME'], 'Videos', 'store720p-short.264')
+    return os.path.join(os.environ['HOME'], 'Videos', 'calstore-concealing.mp4')
 
 def test_deep_sort(video):
-    from ml.vision.models.tracking.deep_sort import DeepSort
+    import numpy as np
+    from ml.vision.models.tracking.dsort import DeepSort
     detector = yolo4(fuse=True, pooling=True)
     pooler = MultiScaleFusionRoIAlign(3)
-    tracker = DeepSort(max_dist=0.2,  
+    tracker = DeepSort(max_feat_dist=0.2,
                        nn_budget=100, 
-                       max_iou_distance=0.7,   # 0.7
-                       max_age=30,             # 30 
-                       n_init=3)               # 3
+                       max_iou_dist=0.7,    # 0.7
+                       max_age=15,          # 30 (FPS)
+                       n_init=3)            # 3
 
     from ml import av
     s = av.open(video)
     v = s.decode()
-    for i, frame in enumerate(v):
-        dets, features = detector.detect([frame], size=608)
-        assert len(dets) == 1
-        assert dets[0].shape[1] == 4+1+1
-        tracker.update(dets[0], features[0])
+    video = Path(video)
 
-        # detector.render(img, results[0], path=f"export/{path.name}")
-    
+    media = av.open(f"export/{video.stem}/{video.stem}-tracking.mp4", 'w')
+    stream = media.add_stream('h264', 15)
+    stream.bit_rate = 2000000
+    for i, frame in enumerate(v):
+        frame = frame.to_rgb().to_ndarray()[:,:,::-1]
+        dets, features = detector.detect([frame], size=608)
+        if True:
+            person = dets[0][:, -1] == 0
+            dets[0] = dets[0][person]
+            features[0] = features[0][person]
+
+        assert len(dets) == 1
+        assert len(dets[0]) == features[0].shape[0]
+        assert dets[0].shape[1] == 4+1+1
+        assert features[0].shape[1] == 256+512+1024
+
+        if len(dets[0]) > 0:
+            D = 1
+            for s in features[0].shape[1:]:
+                D *= s
+            tracker.update(dets[0], features[0].view(len(features[0]), D))
+            #if i == 60:
+            #    break
+            logging.info(f"[{i}] dets[0]: {dets[0].shape}, features[0]: {features[0].shape}")
+            #detector.render(frame, dets[0], path=f"export/{video.stem}/dets/frame{i:03d}.jpg")
+        
+        snapshot = tracker.snapshot()
+        logging.info(f"[{i}] snapshot[0]: {snapshot and list(zip(*snapshot))[0] or len(snapshot)}")
+        # detector.render(frame, snapshot, path=f"export/{video.stem}/tracking/frame{i:03d}.jpg")
+        frame = detector.render(frame, snapshot)
+
+        if media is not None:
+            frame = av.VideoFrame.from_ndarray(frame, format='bgr24')
+            packet = stream.encode(frame)
+            media.mux(packet)
+    if media is not None:
+        packet = stream.encode(None)
+        media.mux(packet)
+        media.close()
