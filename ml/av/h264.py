@@ -25,10 +25,11 @@ def parseNALUHeader(header):
     type = (header & 0x1F)
     return forbidden, ref_idc, type
 
-def NALUParser(bitstream):
+def NALUParser(bitstream, workaround=False):
     '''
     Args:
-        bitstream: a writable bytes-like object that incurs zero copy for slicing
+        bitstream(bytes-like): a writable bytes-like object that incurs zero copy for slicing
+        workaround(bool): removing trailing zero bytes in non-VCL NALUs
     '''
 
     # FIXME Assume at most three NALUs for fast parsing
@@ -44,13 +45,14 @@ def NALUParser(bitstream):
                 count += 1
                 header = bitstream[start+start24or32]
                 trailing0 = 0
-                # FIXME Three consecutive zero bytes may be rejected by e.g. KVS
-                # - encoder simply inserts an additionoal zero byte
-                # - encoder forgot to set the stop bit to 1
-                # - encoder forgot to insert an additional byte with MSB set to 1
-                while bitstream[pos - 1 - trailing0] == 0x00:
-                    trailing0 += 1
-                    logging.warning(f"Skip NALU trailing zero byte at pos {pos - 1 - trailing0}")
+                if workaround:
+                    # FIXME Three consecutive zero bytes may be rejected by e.g. KVS
+                    # - encoder simply inserts an additionoal zero byte
+                    # - encoder forgot to set the stop bit to 1
+                    # - encoder forgot to insert an additional byte with MSB set to 1
+                    while bitstream[pos - 1 - trailing0] == 0x00:
+                        trailing0 += 1
+                        logging.warning(f"Skip NALU trailing zero byte at pos {pos - 1 - trailing0}")
                 yield (start, *parseNALUHeader(header)), bitstream[start:pos - trailing0]
             start24or32 = 24 // 8
             start = pos
@@ -64,13 +66,14 @@ def NALUParser(bitstream):
             if start < pos:
                 header = bitstream[start + start24or32]
                 trailing0 = 0
-                # FIXME Three consecutive zero bytes may be rejected by e.g. KVS
-                # - encoder simply inserts an additionoal zero byte
-                # - encoder forgot to set the stop bit to 1
-                # - encoder forgot to insert an additional byte with MSB set to 1
-                while bitstream[pos - 1 - trailing0] == 0x00:
-                    trailing0 += 1
-                    logging.warning(f"Skip NALU trailing zero byte at pos {pos - 1 - trailing0}")
+                if workaround:
+                    # FIXME Three consecutive zero bytes may be rejected by e.g. KVS
+                    # - encoder simply inserts an additionoal zero byte
+                    # - encoder forgot to set the stop bit to 1
+                    # - encoder forgot to insert an additional byte with MSB set to 1
+                    while bitstream[pos - 1 - trailing0] == 0x00:
+                        trailing0 += 1
+                        logging.warning(f"Skip NALU trailing zero byte at pos {pos - 1 - trailing0}")
                 yield (start, *parseNALUHeader(header)), bitstream[start:pos - trailing0]
             start24or32 = 32 // 8
             start = pos
@@ -83,9 +86,22 @@ def NALUParser(bitstream):
         else:
             pos += 1
 
+    # Last NALU to the end
     if start < pos:
         header = bitstream[start+start24or32]
-        yield (start, *parseNALUHeader(header)), bitstream[start:pos]
+        forbidden, ref_idc, type = parseNALUHeader(header)
+        if workaround and type not in (NALU_t.IDR, NALU_t.NIDR):
+            # FIXME Three consecutive zero bytes may be rejected by e.g. KVS
+            # - encoder simply inserts an additionoal zero byte
+            # - encoder forgot to set the stop bit to 1
+            # - encoder forgot to insert an additional byte with MSB set to 1
+            trailing0 = 0
+            while bitstream[pos - 1 - trailing0] == 0x00:
+                trailing0 += 1
+                logging.warning(f"Skip NALU trailing zero byte at pos {pos - 1 - trailing0}")
+            yield (start, forbidden, ref_idc, type), bitstream[start:pos - trailing0]
+        else:
+            yield (start, forbidden, ref_idc, type), bitstream[start:pos]
 
 # FIXME deprecated since some NALUs must be filtered out or trimmed in place
 class H264Framer(object):
