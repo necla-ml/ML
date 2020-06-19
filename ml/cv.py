@@ -190,7 +190,7 @@ def grid(images, size=608, color=114, padding=(100, 100)):
     """
     assert isinstance(images, list) and all([isinstance(img, np.ndarray) for img in images])
     import random
-    from ml import math
+    from . import math
     min, max = py_min, py_max
     gh, gw = math.factorize(len(images))
     tiles = np.full((size * gh, size * gw, images[0].shape[-1]), 114, dtype=np.uint8)
@@ -231,9 +231,8 @@ def ungrid(grid_image, meta_lst, index_only=True):
     x2_meta = meta_lst[0]['offset'][1]
 
     for i, meta in enumerate(meta_lst):
-
         size = meta['shape'][0] * no_of_images
-
+        
         ih = i // gw
         iw = i % gw
 
