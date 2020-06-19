@@ -219,7 +219,7 @@ def ungrid(grid_image, meta_lst, index_only=True):
     """
     assert isinstance(grid_image, np.ndarray) and isinstance(meta_lst, list)
     import random
-    from ml import math
+    from . import math
 
     no_of_images = len(meta_lst)
     
