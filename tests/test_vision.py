@@ -131,8 +131,8 @@ def test_xyxy2xcycwh(xyxy):
 @pytest.fixture
 def path():
     # TODO download and cache test images
-    return '../yolov3/data/samples/bus.jpg'
     return '../yolov3/data/samples/tiles.jpg'
+    return '../yolov3/data/samples/bus.jpg'
 
 @pytest.mark.essential
 def test_multiscale_fusion_align():
@@ -181,8 +181,8 @@ def test_yolo5(path):
     path = Path(path)
     img = cv.imread(path)
     img2 = cv.resize(img, scale=0.5)
-    detector = yolo5l(pretrained=True, pooling=True, fuse=True)
-    dets, pooled = detector.detect([img, img2], size=736, conf_thres=0.1, iou_thres=0.5)
+    detector = yolo5x(pretrained=True, pooling=True, fuse=True)
+    dets, pooled = detector.detect([img, img2], size=736, conf_thres=0.35, iou_thres=0.5)
     features = detector.features
     print('images:', [(tuple(img.shape), img.mean()) for img in [img, img2]], 
             'dets:', [tuple(det.shape) for det in dets], 
