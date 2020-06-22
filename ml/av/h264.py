@@ -98,7 +98,7 @@ def NALUParser(bitstream, workaround=False):
             trailing0 = 0
             while bitstream[pos - 1 - trailing0] == 0x00:
                 trailing0 += 1
-                logging.warning(f"Skip NALU trailing zero byte at pos {pos - 1 - trailing0}")
+                logging.warning(f"Skip NALU(type={type}) with trailing zero byte at pos {pos - 1 - trailing0}")
             yield (start, forbidden, ref_idc, type), bitstream[start:pos - trailing0]
         else:
             yield (start, forbidden, ref_idc, type), bitstream[start:pos]
