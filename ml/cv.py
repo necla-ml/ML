@@ -123,7 +123,7 @@ def resize(img, scale=1, width=0, height=0, interpolation=INTER_LINEAR, **kwargs
         else:
             return cv2.resize(img, None, fx=scale, fy=scale, interpolation=interpolation)
 
-def letterbox(img, size=608, color=114, pad_w=None, pad_h=None, minimal=True, stretch=False, upscaling=True):
+def letterbox(img, size=736, color=114, pad_w=None, pad_h=None, minimal=True, stretch=False, upscaling=True):
     """Resize and pad to the new shape.
     Args:
         img(BGR): CV2 BGR image
@@ -180,7 +180,7 @@ def letterbox(img, size=608, color=114, pad_w=None, pad_h=None, minimal=True, st
         ratio=ratio,        # H, W
     )
 
-def grid(images, size=608, color=114, padding=(100, 100)):
+def grid(images, size=736, color=114, padding=(100, 100)):
     """Load images in a grid.
     Args:
         images(list[BGR]): list of BGR images
