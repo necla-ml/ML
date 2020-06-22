@@ -119,6 +119,20 @@ def load(cfg="yolov4.cfg", target='yolov4.weights', force=False):
         routed=routed,
     )
 
+def yolo4(**kwargs):
+#def yolo4(cfg='yolov4.cfg', weights='yolov4.weights', fuse=True):
+    """
+    Args:
+        cfg(str): configuration name to download if unavailable
+        weights(str): pretrained weights name to download if unavailable
+        device(str or torch.device): target device to host the model
+        fuse(bool): whether to fuse convolutional and BN
+        pooling(int): output RoI feature pooing size if greater than 0
+    """
+    model = YOLO.create(cfg='yolov4.cfg', weights='yolov4.weights')
+    kwargs.get('fuse', True) and model.fuse()
+    return model
+
 class YOLO(nn.Module):
     @classmethod
     def create(cls, cfg="yolov4.cfg", weights='yolov4.weights', debug=False):

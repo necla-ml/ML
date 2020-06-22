@@ -3,7 +3,7 @@ import pytest
 import torch
 
 from ml import cv, logging
-from ml.vision.models import yolo4
+from ml.vision.models import yolo4, yolo5l, yolo5x
 from ml.vision.datasets.coco import COCO80_CLASSES
 from ml.vision.ops import MultiScaleFusionRoIAlign
 from ml.vision.ops import xyxys2xyxysc, xcycwh2xyxy, xcycwh2xywh, xyxy2xcycwh
@@ -130,6 +130,7 @@ def test_xyxy2xcycwh(xyxy):
 
 @pytest.fixture
 def path():
+    # TODO download and cache test images
     return '../yolov3/data/samples/bus.jpg'
     return '../yolov3/data/samples/tiles.jpg'
 
@@ -160,17 +161,37 @@ def test_multiscale_fusion_align():
     assert list(pooled[0].shape) == [len(rois[0]), 1024+512+256, 3, 3]
 
 @pytest.mark.essential
-def test_yolo(path):
+def test_yolo4(path):
     path = Path(path)
     img = cv.imread(path)
     img2 = cv.resize(img, scale=0.5)
-    detector = yolo4(fuse=True, pooling=True)
-    dets, features = detector.detect([img, img2], size=608)
-    print([det.shape for det in dets], [feats.shape for feats in features])
+    detector = yolo4(pooling=True, fuse=True)
+    (dets, pooled), features = detector.detect([img, img2], size=608), detector.features
+    print('images:', [(tuple(img.shape), img.mean()) for img in [img, img2]], 
+            'dets:', [tuple(det.shape) for det in dets], 
+            'pooled:', [tuple(feats.shape) for feats in pooled],
+            'features:', [tuple(feats.shape) for feats in features])
     assert len(dets) == 2
     assert dets[0].shape[1] == 4+1+1
-    detector.render(img, dets[0], path=f"export/{path.name}")
-    detector.render(img2, dets[1], path=f"export/{path.name[:-4]}2.jpg")
+    detector.render(img, dets[0], path=f"export/{path.name[:-4]}-yolo4.jpg")
+    detector.render(img2, dets[1], path=f"export/{path.name[:-4]}2-yolo4.jpg")
+
+@pytest.mark.essential
+def test_yolo5(path):
+    path = Path(path)
+    img = cv.imread(path)
+    img2 = cv.resize(img, scale=0.5)
+    detector = yolo5l(pretrained=True, pooling=True, fuse=True)
+    dets, pooled = detector.detect([img, img2], size=736, conf_thres=0.1, iou_thres=0.5)
+    features = detector.features
+    print('images:', [(tuple(img.shape), img.mean()) for img in [img, img2]], 
+            'dets:', [tuple(det.shape) for det in dets], 
+            'pooled:', [tuple(feats.shape) for feats in pooled],
+            'features:', [tuple(feats.shape) for feats in features])
+    assert len(dets) == 2
+    assert dets[0].shape[1] == 4+1+1
+    detector.render(img, dets[0], score_thr=0.1, path=f"export/{path.name[:-4]}-yolo5.jpg")
+    detector.render(img2, dets[1], score_thr=0.1, path=f"export/{path.name[:-4]}2-yolo5.jpg")
 
 ## Test Tracking
 
@@ -183,7 +204,9 @@ def video():
 def test_deep_sort(video):
     import numpy as np
     from ml.vision.models.tracking.dsort import DeepSort
-    detector = yolo4(fuse=True, pooling=True)
+    model, size = yolo4, 608
+    model, size = yolo5x, 736
+    detector = model(pretrained=True, fuse=True, pooling=True)
     pooler = MultiScaleFusionRoIAlign(3)
     tracker = DeepSort(max_feat_dist=0.2,
                        nn_budget=100, 
@@ -196,12 +219,12 @@ def test_deep_sort(video):
     v = s.decode()
     video = Path(video)
 
-    media = av.open(f"export/{video.stem}/{video.stem}-tracking.mp4", 'w')
+    media = av.open(f"export/{video.stem}/{video.stem}-{model.__name__}-tracking.mp4", 'w')
     stream = media.add_stream('h264', 15)
     stream.bit_rate = 2000000
     for i, frame in enumerate(v):
         frame = frame.to_rgb().to_ndarray()[:,:,::-1]
-        dets, features = detector.detect([frame], size=608)
+        dets, features = detector.detect([frame], size=size)
         if True:
             person = dets[0][:, -1] == 0
             dets[0] = dets[0][person]
@@ -210,7 +233,8 @@ def test_deep_sort(video):
         assert len(dets) == 1
         assert len(dets[0]) == features[0].shape[0]
         assert dets[0].shape[1] == 4+1+1
-        assert features[0].shape[1] == 256+512+1024
+        # assert features[0].shape[1] == 256+512+1024
+        assert features[0].shape[1] == 320+640+1280
 
         if len(dets[0]) > 0:
             D = 1
@@ -220,11 +244,11 @@ def test_deep_sort(video):
             #if i == 60:
             #    break
             logging.info(f"[{i}] dets[0]: {dets[0].shape}, features[0]: {features[0].shape}")
-            #detector.render(frame, dets[0], path=f"export/{video.stem}/dets/frame{i:03d}.jpg")
+            #detector.render(frame, dets[0], path=f"export/{video.stem}-{model.__name__}/dets/frame{i:03d}.jpg")
         
         snapshot = tracker.snapshot()
         logging.info(f"[{i}] snapshot[0]: {snapshot and list(zip(*snapshot))[0] or len(snapshot)}")
-        # detector.render(frame, snapshot, path=f"export/{video.stem}/tracking/frame{i:03d}.jpg")
+        # detector.render(frame, snapshot, path=f"export/{video.stem}-{model.__name__}/tracking/frame{i:03d}.jpg")
         frame = detector.render(frame, snapshot)
 
         if media is not None:

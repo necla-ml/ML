@@ -16,8 +16,25 @@ from .. import backbone
 COLORS91 = [[random.randint(0, 255) for _ in range(3)] for _ in range(len(coco.COCO91_CLASSES))]
 COLORS80 = [COLORS91[coco.COCO80_TO_91[i]] for i in range(len(coco.COCO80_CLASSES))]
 
-def yolo4(**kwargs):
-    return YOLODetector(**kwargs)
+## Model factory methods to create detectors with consistent APIs
+
+def yolo4(pooling=False, fuse=True, **kwargs):
+    from .yolo import yolo4
+    cfg = kwargs.get('cfg', 'yolov4.cfg')
+    weights = kwargs.get('weights', 'yolov4.weights')
+    fuse = kwargs.get('fuse', True)
+    m = yolo4(fuse=fuse)
+    return YOLODetector(m, pooling=pooling)
+
+def yolo5l(pretrained=False, channels=3, classes=80, pooling=False, fuse=True, **kwargs):
+    from .yolo5 import yolo5l
+    m = yolo5l(pretrained, channels=channels, classes=classes, fuse=fuse, **kwargs)
+    return YOLODetector(m, pooling=pooling)
+
+def yolo5x(pretrained=False, channels=3, classes=80, pooling=False, fuse=True, **kwargs):
+    from .yolo5 import yolo5x
+    m = yolo5x(pretrained, channels=channels, classes=classes, fuse=fuse, **kwargs)
+    return YOLODetector(m, pooling=pooling)
 
 def mask_rcnn(pretrained=False, num_classes=1+90, representation=1024, backbone=None, with_mask=True, **kwargs):
     if backbone is None:
@@ -77,6 +94,8 @@ def mmdet_load(cfg, chkpt=None, with_mask=False, **kwargs):
         model.semantic_head = None
 
     return MMDetector(model)
+
+## ML Detector APIs
 
 class Detector(nn.Module):
     #__metaclass__ = ABCMeta
@@ -138,6 +157,8 @@ class Detector(nn.Module):
         pass
 
 class YOLODetector(Detector):
+    
+    '''
     def __init__(self, cfg='yolov4.cfg', weights='yolov4.weights', device=None, fuse=True, pooling=0):
         """
         Args:
@@ -151,10 +172,21 @@ class YOLODetector(Detector):
         import torch
         model = YOLO.create(cfg, weights)
         fuse and model.fuse()
+        super().__init__(model)
+        self.pooler = None
+        if pooling:
+            self.pooler = MultiScaleFusionRoIAlign(isinstance(pooling, bool) and 2 or pooling)
+            logging.info(f"Multi-scale pooling size={self.pooler.output_size}")
         device = device or (torch.cuda.is_available() and "cuda" or "cpu")
-        super().__init__(model.to(device))
-        self.pooler = MultiScaleFusionRoIAlign(isinstance(pooling, bool) and 2 or pooling) if pooling else None
-        logging.info(f"Multi-scale pooling size={self.pooler.output_size}")
+        self.to(device)
+    '''
+
+    def __init__(self, model, pooling=0):
+        super(YOLODetector, self).__init__(model)
+        self.pooler = None
+        if pooling:
+            self.pooler = MultiScaleFusionRoIAlign(isinstance(pooling, bool) and 1 or pooling)
+            logging.info(f"Multi-scale pooling size={self.pooler.output_size}")
 
     @property
     def with_det(self):
@@ -176,10 +208,13 @@ class YOLODetector(Detector):
         from ml.vision.models.detection import yolo
         mosaic = kwargs.get('mosaic', False)
         pooling = kwargs.get('pooling', False)
-        size = kwargs.get('size', 608)
+        size = kwargs.get('size', 608) # v4
+        size = kwargs.get('size', 736) # v5
         cfg = dict(
-            conf_thres = kwargs.get('conf_thres', 0.3),
-            iou_thres = kwargs.get('iou_thres', 0.6),
+            # conf_thres = kwargs.get('conf_thres', 0.3),
+            # iou_thres = kwargs.get('iou_thres', 0.6),
+            conf_thres = kwargs.get('conf_thres', 0.4),
+            iou_thres = kwargs.get('iou_thres', 0.5),
             agnostic = kwargs.get('agnostic', False),
             merge = kwargs.get('merge', True),
         )
@@ -206,7 +241,7 @@ class YOLODetector(Detector):
                 img,
                 result,
                 classes=coco.COCO80_CLASSES,
-                score_thr=0.3,
+                score_thr=None,
                 show=True,
                 wait_time=0,
                 path=None):
@@ -233,8 +268,9 @@ class YOLODetector(Detector):
             # Detection with tracking [(tid, xyxysc)*]
             tids, boxes = list(zip(*result))
             result = th.stack(boxes)
-            assert len(result[:, 4] >= score_thr) == len(result)
-            result = result[result[:, 4] >= score_thr]
+            if score_thr:
+                assert len(result[:, 4] >= score_thr) == len(result)
+                result = result[result[:, 4] >= score_thr]
             labels = [f"{classes[c.int()]}[{tid}]" for tid, c in zip(tids, result[:, 5])]
             colors = [COLORS80[c.int()] for c in result[:, 5]]
             cv.drawBoxes(img, result[:, :4], labels=labels, scores=result[:, 4], colors=colors)
