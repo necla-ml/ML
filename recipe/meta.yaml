@@ -27,7 +27,7 @@ requirements:
     - numexpr
     - pip
     - python=3.7
-    - pytorch=1.5
+    - pytorch=1.5.1
     - pyyaml
     - pytables
     - torchvision
@@ -64,7 +64,7 @@ requirements:
     - pytest>=5.2.0
     - python=3.7
     - python-daemon
-    - pytorch=1.5
+    - pytorch=1.5.1
     - pyyaml>=5.1.2
     - requests-toolbelt         # multipart streaming over HTTP
     - setuptools>=41.2
