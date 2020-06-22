@@ -123,18 +123,17 @@ def resize(img, scale=1, width=0, height=0, interpolation=INTER_LINEAR, **kwargs
         else:
             return cv2.resize(img, None, fx=scale, fy=scale, interpolation=interpolation)
 
-def letterbox(img, size=608, color=114, minimal=True, stretch=False, upscaling=True):
+def letterbox(img, size=608, color=114, pad_w=None, pad_h=None, minimal=True, stretch=False, upscaling=True):
     """Resize and pad to the new shape.
     Args:
         img(BGR): CV2 BGR image
         size[416 | 512 | 608 | 32*]: target long side to resize to in multiples of 32
         color(tuple): Padding color
+        pad_w(int): Padding along width
+        pad_h(int): Padding along height
         minimal(bool): Padding up to the short side or not
         stretch(bool): Scale the short side without keeping the aspect ratio
         upscaling(bool): Allows to scale up or not
-    Returns:
-        resized(BGR): resized and/or padded image
-        meta(dict): original shape, padding offsets and scaling ratio
     """
     # Resize image to a multiple of 32 pixels on both sides 
     # https://github.com/ultralytics/yolov3/issues/232
@@ -149,9 +148,12 @@ def letterbox(img, size=608, color=114, minimal=True, stretch=False, upscaling=T
         r = py_min(r, 1.0)
 
     # Compute padding
-    ratio = (r, r)
-    new_unpad = int(round(shape[1] * r)), int(round(shape[0] * r))  # actual size to scale to (w, h)
+    ratio = r, r
+    pw = pad_w and int(round(shape[1] * r - pad_w)) or int(round(shape[1] * r))
+    ph = pad_h and int(round(shape[0] * r - pad_h)) or int(round(shape[0] * r))
+    new_unpad = pw, ph  # actual size to scale to (w, h)
     dw, dh = size[1] - new_unpad[0], size[0] - new_unpad[1]         # padding on sides
+
     if minimal: 
         # Padding up to 64 for the short side
         dw, dh = dw % 64, dh % 64
@@ -159,16 +161,18 @@ def letterbox(img, size=608, color=114, minimal=True, stretch=False, upscaling=T
         # Stretch the short side to the exact target size
         dw, dh = 0.0, 0.0
         new_unpad = size
-        ratio = (size[0] / shape[0], size[1] / shape[1])
+        ratio = size[0] / shape[0], size[1] / shape[1]
 
     dw /= 2
     dh /= 2
+
     if shape[::-1] != new_unpad:
         img = resize(img, width=new_unpad[0], height=new_unpad[1])
-    
+
     # Fractional to integral padding
     top, bottom = int(round(dh - 0.1)), int(round(dh + 0.1))
     left, right = int(round(dw - 0.1)), int(round(dw + 0.1))
+    
     resized = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)
     return resized, dict(
         shape=shape,        # HxW
@@ -176,12 +180,13 @@ def letterbox(img, size=608, color=114, minimal=True, stretch=False, upscaling=T
         ratio=ratio,        # H, W
     )
 
-def grid(images, size=608, color=114):
+def grid(images, size=608, color=114, padding=(100, 100)):
     """Load images in a grid.
     Args:
         images(list[BGR]): list of BGR images
         size(int): target grid cell resolution to resize and pad
         color(int or tuple): color to pad
+        padding(tuple): custom padding on (width, height)
     """
     assert isinstance(images, list) and all([isinstance(img, np.ndarray) for img in images])
     import random
@@ -195,12 +200,55 @@ def grid(images, size=608, color=114):
         ih = i // gw
         iw = i % gw
         y1, x1 = ih * size, iw * size
-        img, meta = letterbox(img, size, minimal=False)
+        img, meta = letterbox(img, size, minimal=False, pad_w=padding[0], pad_h=padding[1], color=color)
         tiles[y1:y1+size, x1:x1+size] = img[:, :]  # img4[ymin:ymax, xmin:xmax]
         top, left = meta['offset']
         meta['offset'] = (y1+top, x1+left)
         metas.append(meta)
+
     return tiles, metas
+
+def ungrid(grid_image, meta_lst, index_only=True):
+    """Get images from grid
+    Args:
+        grid_image(np.ndarray): grid image 
+        meta_lst(list): list of meta data
+        index_only(bool): return entire image or image co-ordinates only
+    Returns:
+        list of image indexes for respective images or numpy image
+    """
+    assert isinstance(grid_image, np.ndarray) and isinstance(meta_lst, list)
+    import random
+    from . import math
+
+    no_of_images = len(meta_lst)
+    
+    gh, gw = math.factorize(no_of_images)
+
+    images = []
+
+    y2_meta = meta_lst[0]['offset'][0]
+    x2_meta = meta_lst[0]['offset'][1]
+
+    for i, meta in enumerate(meta_lst):
+        size = meta['shape'][0] * no_of_images
+        
+        ih = i // gw
+        iw = i % gw
+
+        y2, x2 = ih * size, iw * size
+        y1 = meta['offset'][0]
+        y2 = y2 + size - y2_meta
+        x1 = meta['offset'][1]
+        x2 = x2 + size - x2_meta
+        if index_only:
+            images.append((y1, y2, x1, x2))
+        else:
+            img = grid_image[y1:y2, x1:x2, :]
+            images.append(img)
+
+    return images
+       
 
 def imshow(img, scale=1, title='', **kwargs):
     import torch
