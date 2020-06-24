@@ -189,10 +189,6 @@ if __name__ == '__main__':
     version = write_version_py(pkg)
     requirements = [
         'torch',
-        'torchvision',
-#        'torchaudio',
-#        'torchtext',
-#        'transformers'
     ]
     cmdclass = dict(
         build_ext=torch.utils.cpp_extension.BuildExtension,
@@ -200,7 +196,6 @@ if __name__ == '__main__':
     )
     extensions = [ext for ext in ext_modules(pkg)]
     namespaces = ['ml']
-    # packages = find_packages(exclude=('tools', 'tools.*', 'recipe', 'submodules'))
     packages = find_namespace_packages(include=['ml.*'], exclude=('ml.csrc', 'ml.csrc.*'))
     setup(
         name=pkg.upper(),

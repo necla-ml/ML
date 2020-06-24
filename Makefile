@@ -56,12 +56,6 @@ conda-clean:
 
 ## Local Development 
 
-setup-mmdet:
-	cd submodules/mmdetection; pip install -e .
-
-setup-deep_sort:
-	ln -sf ../../submodules/deep_sort ml/ops
-
 dev:
 	git config --global credential.helper cache --timeout=21600
 	git checkout dev
@@ -70,26 +64,9 @@ dev:
 dev-setup: dev
 	pip install -vv --no-deps --ignore-installed --no-build-isolation --no-binary :all: -e .
 
-uninstall-develop:
+dev-clean:
 	pip uninstall $$(basename -s .git `git config --get remote.origin.url`)
-
-## PIP Package Distribution
-
-setup:
-	@rm -fr dist
-	python setup.py bdist_wheel
-
-install: dist/*.whl
-	pip install dist/*.whl
-
-uninstall: dist/*.whl
-	pip uninstall dist/*.whl -y
-
-reinstall: uninstall install
-
-clean:
 	python setup.py clean --all
-	@rm -fr dist
 
 ## VCS
 
@@ -103,32 +80,15 @@ clone:
 
 checkout:
 	git submodule update --init --recursive
-	#git submodule foreach -q --recursive 'git checkout $$(git config -f $$toplevel/.gitmodules submodule.$$name.branch || echo master)'
-	cd submodules/mmdetection; git clean -fd; git $@ -f v1.1.0
-	export branch=$$(git symbolic-ref --short HEAD); git $@ $$branch
+	#cd submodules/mmdetection; git clean -fd; git $@ -f v2.1.0
+	branch=$$(git symbolic-ref --short HEAD); \
+		echo $$branch; \
+		git submodule foreach -q --recursive "git checkout $$(git config -f $$toplevel/.gitmodules submodule.$$name.branch || echo $$branch)"
 
 co: checkout
 
 pull: co
-	# git submodule update --remote --merge --recursive
-	git pull
-
-pull-deep-sort:
-	cd submodules/deep_sort; \
-		git pull; \
-		git remote add upstream https://github.com/nwojke/deep_sort; \
-		git fetch upstream; \
-		git checkout master; \
-		git merge upstream/master;
-
-co-mmdet:
-	cd submodules/mmdetection; \
-		git pull; \
-		git remote add upstream https://github.com/open-mmlab/mmdetection; \
-		git fetch --tags upstream; \
-		git checkout master; \
-		git merge v2.0.0; \
-		git checkout v2.0.0
+	git submodule update --remote --merge --recursive
 
 merge:
 	git checkout master
