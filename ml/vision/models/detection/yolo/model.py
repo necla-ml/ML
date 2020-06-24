@@ -253,7 +253,7 @@ class YOLO(nn.Module):
                 msg = ''
 
         if self.training:
-            return predictions
+            return predictions, self.logits
         else:
             y = predictions
             y = torch.cat(y, 1)  # cat yolo outputs

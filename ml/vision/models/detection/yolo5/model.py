@@ -23,7 +23,7 @@ def forward_once(self, x, profile=False):
     if profile:
         print('%.1fms total' % sum(dt))
     self.features = [y[i] for i in (20, 15, 10)]
-    return x[0]
+    return x if self.training else x[0]
 
 def yolo5l(pretrained=False, channels=3, classes=80, fuse=True):
     import types
