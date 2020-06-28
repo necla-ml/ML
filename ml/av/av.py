@@ -14,6 +14,28 @@ aac: ['aac_latm', 'aac', 'aac_at', 'aac_fixed']
 vcodecs: ['mjpeg', 'mpeg4', 'h264', 'libx264', 'libopenh264', 'hevc']
 '''
 
+RESOLUTIONS = {
+    'D1_NTSC': (704, 480),
+    'D1_PAL:': (704, 576),
+    '480p': (640, 480),
+    '720p': (1280, 720),
+    '720p': (1280, 960),
+    '1080p': (1920, 1080),
+    '1440p': (2560, 1440),
+    '1536p': (2048, 1536),
+    '2160p': (3840, 2160),
+}
+
+def resolution_str(*res):
+    '''Return resolution in WxH as the video_size option.
+    '''
+    if len(res) > 1:
+        return 'x'.join(map(str, res))
+    elif len(res) == 1:
+        return resolution_str(*RESOLUTIONS[res[0]])
+    else:
+        raise ValueError(f"{res} must be of (width, height) or in {list(RESOLUTIONS.keys())}")
+
 def fourcc(fmt):
     if len(fmt) != 4:
         raise ValueError(f"Expected four CC but got {fmt} of {len(fmt)} CC")

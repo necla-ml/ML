@@ -4,6 +4,7 @@ from ml import logging
 __all__ = [
     'NALU_t',
     'NALUParser',
+    'hasStartCode',
     'H264Framer',
 ]
 
@@ -18,6 +19,9 @@ class NALU_t(IntEnum):
     SPS = 7
     PPS = 8
     AUD = 9 # Dahua
+
+def hasStartCode(nalu):
+    return nalu[:4] == START_CODE32 or nalu[:3] == START_CODE32
 
 def parseNALUHeader(header):
     forbidden = (header & 0x80) >> 7
