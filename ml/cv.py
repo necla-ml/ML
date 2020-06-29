@@ -2,7 +2,6 @@ import os
 import math
 import random
 from pathlib import Path
-from typing import Union, Optional, List, Tuple, Text, BinaryIO
 
 import numpy as np
 
@@ -14,7 +13,6 @@ irange = range
 from cv2 import *
 
 try:
-    import torch
     import torchvision as tv
 except ImportError as e:
     pass
@@ -260,6 +258,7 @@ def clip_boxes_to_coord(boxes, coord, size=None):
     Returns:
         clipped_boxes (Tensor[N, 4])
     """
+    import torch
 
     dim = boxes.dim()
     boxes_x = boxes[..., 0::2]
@@ -279,22 +278,16 @@ def clip_boxes_to_coord(boxes, coord, size=None):
     
     return clipped_final
 
-def make_grid(
-    tensor: Union[torch.Tensor, List[torch.Tensor]],
-    nrow: int = 8,
-    padding: int = 2,
-    normalize: bool = False,
-    range: Optional[Tuple[int, int]] = None,
-    scale_each: bool = False,
-    pad_value: int = 0,
-) -> torch.Tensor:
-    """Make a grid of images.
-    Args:
+def make_grid(tensor, nrow: int = 1, padding: int = 50, normalize: bool = False, range: Optional[Tuple[int, int]] = None, scale_each: bool = False, pad_value: int = 0) -> tuple:
+    """
+    Make a grid of images.
+
+    Params:
         tensor (Tensor or list): 4D mini-batch Tensor of shape (B x C x H x W)
             or a list of images all of the same size.
         nrow (int, optional): Number of images displayed in each row of the grid.
-            The final grid size is ``(B / nrow, nrow)``. Default: ``8``.
-        padding (int, optional): amount of padding. Default: ``2``.
+            The final grid size is ``(B / nrow, nrow)``. Default: ``1``.
+        padding (int, optional): amount of padding. Default: ``50``.
         normalize (bool, optional): If True, shift the image to the range (0, 1),
             by the min and max values specified by :attr:`range`. Default: ``False``.
         range (tuple, optional): tuple (min, max) where min and max are numbers,
@@ -303,9 +296,12 @@ def make_grid(
         scale_each (bool, optional): If ``True``, scale each image in the batch of
             images separately rather than the (min, max) over all images. Default: ``False``.
         pad_value (float, optional): Value for the padded pixels. Default: ``0``.
+    Returns:
+        tuple of grid image and list of coordinates of individual images (tuple(Tensor, list(tuple)))
     Example:
         See this notebook `here <https://gist.github.com/anonymous/bf16430f7750c023141c562f3e9f2a91>`_
     """
+    import torch
     if not (torch.is_tensor(tensor) or
             (isinstance(tensor, list) and all(torch.is_tensor(t) for t in tensor))):
         raise TypeError('tensor or list of tensors expected, got {}'.format(type(tensor)))
@@ -375,7 +371,7 @@ def make_grid(
             
     return grid, coordinates
 
-def split_boxes(img_coordinates: torch.Tensor, boxes: torch.Tensor, boxes_scores: Optional[torch.Tensor]=None):
+def split_boxes(img_coordinates, boxes, boxes_scores=None):
     """
     Split boxes based on IOU of image coordinates and boxes and optionally scores.
 
@@ -386,6 +382,7 @@ def split_boxes(img_coordinates: torch.Tensor, boxes: torch.Tensor, boxes_scores
     Returns:
         split boxes based on image coordinates (List(Tupe(Tensor[N,4], Tensor[N,1])))
     """
+    import torch
     if not torch.is_tensor(img_coordinates) and torch.is_tensor(boxes):
         raise TypeError('Input arguments must be torch tensors')
 
