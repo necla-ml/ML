@@ -14,6 +14,7 @@ irange = range
 from cv2 import *
 
 try:
+    import torch
     import torchvision as tv
 except ImportError as e:
     pass
