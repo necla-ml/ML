@@ -59,7 +59,6 @@ class H5Database(object):
     def __del__(self):
         self.close()
 
-
 def save(data, path, meta=None, complevel=6, complib='blosc:zstd', bitshuffle=True, **kwargs):
     path = Path(path)
     if path.suffix in ['.h5', '.hd5']:
@@ -103,17 +102,6 @@ def load(path, **kwargs):
     else:
         with open(path, mode) as f:
             return eval(f.read())
-
-def download(url, path, force=False):
-    path = Path(path)
-    res = 0
-    if not path.exists() or force:
-        cmd = f"curl -LJfq {url} -o {path}"
-        logging.info(f"Downloading {url}...")
-        logging.info(cmd)
-        res = os.system(cmd)
-    logging.info(f"Downloaded {url} to {path}")
-    return res == 0 and os.path.exists(path)
 
 def close_all():
     tables.file._open_files.close_all()
