@@ -123,14 +123,12 @@ def resize(img, scale=1, width=0, height=0, interpolation=INTER_LINEAR, **kwargs
         else:
             return cv2.resize(img, None, fx=scale, fy=scale, interpolation=interpolation)
 
-def letterbox(img, size=736, color=114, pad_w=None, pad_h=None, minimal=True, stretch=False, upscaling=True):
+def letterbox(img, size=736, color=114, minimal=True, stretch=False, upscaling=True):
     """Resize and pad to the new shape.
     Args:
         img(BGR): CV2 BGR image
         size[416 | 512 | 608 | 32*]: target long side to resize to in multiples of 32
         color(tuple): Padding color
-        pad_w(int): Padding along width
-        pad_h(int): Padding along height
         minimal(bool): Padding up to the short side or not
         stretch(bool): Scale the short side without keeping the aspect ratio
         upscaling(bool): Allows to scale up or not
@@ -149,8 +147,8 @@ def letterbox(img, size=736, color=114, pad_w=None, pad_h=None, minimal=True, st
 
     # Compute padding
     ratio = r, r
-    pw = pad_w and int(round(shape[1] * r - pad_w)) or int(round(shape[1] * r))
-    ph = pad_h and int(round(shape[0] * r - pad_h)) or int(round(shape[0] * r))
+    pw = int(round(shape[1] * r))
+    ph = int(round(shape[0] * r))
     new_unpad = pw, ph  # actual size to scale to (w, h)
     dw, dh = size[1] - new_unpad[0], size[0] - new_unpad[1]         # padding on sides
 
@@ -180,13 +178,12 @@ def letterbox(img, size=736, color=114, pad_w=None, pad_h=None, minimal=True, st
         ratio=ratio,        # H, W
     )
 
-def grid(images, size=736, color=114, padding=(100, 100)):
+def grid(images, size=736, color=114):
     """Load images in a grid.
     Args:
         images(list[BGR]): list of BGR images
         size(int): target grid cell resolution to resize and pad
         color(int or tuple): color to pad
-        padding(tuple): custom padding on (width, height)
     """
     assert isinstance(images, list) and all([isinstance(img, np.ndarray) for img in images])
     import random
@@ -200,7 +197,7 @@ def grid(images, size=736, color=114, padding=(100, 100)):
         ih = i // gw
         iw = i % gw
         y1, x1 = ih * size, iw * size
-        img, meta = letterbox(img, size, minimal=False, pad_w=padding[0], pad_h=padding[1], color=color)
+        img, meta = letterbox(img, size, minimal=False, color=color)
         tiles[y1:y1+size, x1:x1+size] = img[:, :]  # img4[ymin:ymax, xmin:xmax]
         top, left = meta['offset']
         meta['offset'] = (y1+top, x1+left)
