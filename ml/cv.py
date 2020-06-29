@@ -373,6 +373,37 @@ def make_grid(
             k = k + 1
             
     return grid, coordinates
+
+def split_boxes(img_coordinates: torch.Tensor, boxes: torch.Tensor, boxes_scores: Optional[torch.Tensor]=None):
+    """
+    Split boxes based on IOU of image coordinates and boxes and optionally scores.
+
+    Params:
+        img_coordinates (Tensor[N, 4]): image coordinates in (x1, y1, x2, y2) format 
+        boxes (Tensor[N, 4]): boxes in (x1, y1, x2, y2) format
+        boxes_scores (Tensor[N, 1], Optional): box scores
+    Returns:
+        split boxes based on image coordinates (List(Tupe(Tensor[N,4], Tensor[N,1])))
+    """
+    if not torch.is_tensor(img_coordinates) and torch.is_tensor(boxes):
+        raise TypeError('Input arguments must be torch tensors')
+
+    from torchvision.ops.boxes import box_iou
+
+    iou = box_iou(img_coordinates, boxes)
+
+    results = []
+    for i, img_coordinate in enumerate(img_coordinates):
+        non_zero = (iou[i] != 0).nonzero()
+        flattened_non_zero = torch.flatten(non_zero)
+        final_boxes = torch.index_select(boxes, 0, flattened_non_zero)
+        if not isinstance(boxes_scores, type(None)):
+            final_boxes_scores = torch.index_select(boxes_scores, 0, flattened_non_zero)
+            results.append((final_boxes, final_boxes_scores))
+        else:
+            results.append((final_boxes))
+
+    return results
        
 
 def imshow(img, scale=1, title='', **kwargs):
