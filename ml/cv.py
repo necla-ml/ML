@@ -245,6 +245,36 @@ def ungrid(grid_image, meta_lst, index_only=True):
             images.append(img)
 
     return images
+
+def clip_boxes_to_coord(boxes, coord, size=None):
+    """
+    Clip boxes so that they lie inside within coordinates of an image and optionally shift them to size.
+
+    Params:
+        boxes (Tensor[N, 4]): boxes in (x1, y1, x2, y2) format
+        coord (Tensor[N, 4]): image coordinates in (x1, y1, x2, y2) format
+        size (tuple(height, width)): shift boxes to size
+    Returns:
+        clipped_boxes (Tensor[N, 4])
+    """
+
+    dim = boxes.dim()
+    boxes_x = boxes[..., 0::2]
+    boxes_y = boxes[..., 1::2]
+    coord_x = coord[..., 0::2]
+    coord_y = coord[..., 1::2]
+
+    boxes_x = boxes_x.clamp(min=coord_x[0], max=coord_x[1])
+    boxes_y = boxes_y.clamp(min=coord_y[0], max=coord_y[1])
+
+    clipped_boxes = torch.stack((boxes_x, boxes_y), dim=dim)
+    # reshape boxes as earlier shape
+    clipped_final = clipped_boxes.reshape(boxes.shape)
+    if size:
+        diff = coord - torch.Tensor([0, 0, size[1], size[0]]) 
+        clipped_final = clipped_final - diff
+    
+    return clipped_final
        
 
 def imshow(img, scale=1, title='', **kwargs):
