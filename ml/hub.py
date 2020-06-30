@@ -53,7 +53,7 @@ def download_gdrive(id='1mM8aZJlWTxOg7BZJvNUMrTnA2AbeCVzS', path='/tmp/yolov5x.p
     logging.info(f'Done in {time.time() - t:.1f}s')
     return r
 
-def load_state_dict_from_gdrive(id, filename, model_dir=None, map_location=None, force=False, progress=True, check_hash=False):
+def load_state_dict_from_gdrive(id, filename, model_dir=None, map_location=None, force_reload=False, progress=True, check_hash=False):
     if model_dir is None:
         # Otherwise, hub_dir would be used.
         ml_home = _get_ml_home()
@@ -70,7 +70,7 @@ def load_state_dict_from_gdrive(id, filename, model_dir=None, map_location=None,
             raise
 
     path = f"{model_dir}/{filename}"
-    if download_gdrive(id, path, force=force) != 0:
+    if download_gdrive(id, path, force=force_reload) != 0:
         raise IOError(f"Failed to download to {path}")
 
     # Note: extractall() defaults to overwrite file if exists. No need to clean up beforehand.
