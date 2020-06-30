@@ -262,7 +262,7 @@ def imshow(img, scale=1, title='', **kwargs):
     if isinstance(img, Image.Image):
         img.show()
     else:
-        cv2.imshow(title, img)
+        cv2.imshow(str(title), img)
         waitKey(0)
         destroyAllWindows()
 
