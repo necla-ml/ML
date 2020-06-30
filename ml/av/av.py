@@ -19,7 +19,7 @@ RESOLUTIONS = {
     'D1_PAL:': (704, 576),
     '480p': (640, 480),
     '720p': (1280, 720),
-    '720p': (1280, 960),
+    '960p': (1280, 960),
     '1080p': (1920, 1080),
     '1440p': (2560, 1440),
     '1536p': (2048, 1536),
@@ -28,6 +28,10 @@ RESOLUTIONS = {
 
 def resolution_str(*res):
     '''Return resolution in WxH as the video_size option.
+    Args:
+        res(Tuple[int, int] | List[int]): a tuple of width and height or key to RESOLUTIONS
+    Returns:
+        resolution(str): a string of WxH as an ffmpeg option
     '''
     if len(res) > 1:
         return 'x'.join(map(str, res))
