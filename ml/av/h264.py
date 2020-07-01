@@ -21,7 +21,7 @@ class NALU_t(IntEnum):
     AUD = 9 # Dahua
 
 def hasStartCode(nalu):
-    return nalu[:4] == START_CODE32 or nalu[:3] == START_CODE32
+    return nalu[:4] == START_CODE32 or nalu[:3] == START_CODE24
 
 def parseNALUHeader(header):
     forbidden = (header & 0x80) >> 7
