@@ -12,6 +12,7 @@ import cv2
 py_min, py_max = min, max
 irange = range
 from cv2 import *
+from . import logging
 
 try:
     import torchvision as tv
@@ -19,6 +20,34 @@ except ImportError as e:
     pass
 else:
     tv.set_image_backend('accimage')
+
+## PIL functions
+
+PIL_EXIF_TAGS = {}
+
+def PIL_exif_tag(value='Orientation'):
+    if value not in PIL_EXIF_TAGS:
+        from PIL import ExifTags
+        for key in ExifTags.TAGS.keys():
+            if ExifTags.TAGS[key] == 'Orientation':
+                PIL_EXIF_TAGS[value] = key
+                break
+    return PIL_EXIF_TAGS.get(value, None)
+
+def PIL_exif_size(img):
+    '''Returns shape w.r.t. EXIF orientation.
+    '''
+    s = img.size  # (w, h)
+    try:
+        rotation = dict(img._getexif().items())[PIL_exif_tag(value='Orientation')]
+        if rotation == 6:  # rotation 270
+            s = (s[1], s[0])
+        elif rotation == 8:  # rotation 90
+            s = (s[1], s[0])
+    except:
+        # No EXIF
+        pass
+    return s
 
 ## Image Pixel Format
 
@@ -50,7 +79,6 @@ def pts(pts):
     elif type(pts[0]) is tuple:
         pts = [[list(p)] for p in pts]
     return np.array(pts)
-
 
 def isTorch(img):
     import torch
