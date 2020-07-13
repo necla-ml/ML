@@ -5,6 +5,7 @@ from typing import *
 from pathlib import Path
 
 import numpy as np
+import torch as th
 
 from PIL import Image
 import cv2
@@ -12,7 +13,7 @@ import cv2
 py_min, py_max = min, max
 irange = range
 from cv2 import *
-from . import logging
+from . import sys, logging
 
 try:
     import torchvision as tv
@@ -68,6 +69,7 @@ YELLOW   = (  0, 255, 255)
 WHITE    = (255, 255, 255)
 FG       = GREEN
 BG       = BLACK
+COLORS91 = [[random.randint(0, 255) for _ in range(3)] for _ in range(91)]
 
 def pts(pts):
     r"""
@@ -81,8 +83,7 @@ def pts(pts):
     return np.array(pts)
 
 def isTorch(img):
-    import torch
-    return torch.is_tensor(img) and img.ndimension() == 3
+    return th.is_tensor(img) and img.ndimension() == 3
 
 def save(src, path, q=95):
     if isTorch(src):
@@ -126,11 +127,10 @@ def fromTorch(src):
         return src[:,:,::-1] if src.ndim == 3 else np.squeeze(src)
 
 def toTorch(src, device='cpu'):
-    import torch
     # BGR2RGB, permute
     src = src[:,:,::-1] if src.ndim == 3 else src
     src = src.transpose(2, 0, 1).astype(np.float32)
-    t = torch.from_numpy(src / 255).to(device)
+    t = th.from_numpy(src / 255).to(device)
     return t
 
 def resize(img, scale=1, width=0, height=0, interpolation=INTER_LINEAR, **kwargs):
@@ -287,8 +287,6 @@ def clip_boxes_to_coord(boxes, coord, size=None):
     Returns:
         clipped_boxes (Tensor[N, 4])
     """
-    import torch
-
     dim = boxes.dim()
     boxes_x = boxes[..., 0::2]
     boxes_y = boxes[..., 1::2]
@@ -298,11 +296,11 @@ def clip_boxes_to_coord(boxes, coord, size=None):
     boxes_x = boxes_x.clamp(min=coord_x[0], max=coord_x[1])
     boxes_y = boxes_y.clamp(min=coord_y[0], max=coord_y[1])
 
-    clipped_boxes = torch.stack((boxes_x, boxes_y), dim=dim)
+    clipped_boxes = th.stack((boxes_x, boxes_y), dim=dim)
     # reshape boxes as earlier shape
     clipped_final = clipped_boxes.reshape(boxes.shape)
     if size:
-        diff = coord - torch.Tensor([0, 0, size[1], size[0]]) 
+        diff = coord - th.Tensor([0, 0, size[1], size[0]]) 
         clipped_final = clipped_final - diff
     
     return clipped_final
@@ -330,24 +328,23 @@ def make_grid(tensor, nrow: int = 1, padding: int = 50, normalize: bool = False,
     Example:
         See this notebook `here <https://gist.github.com/anonymous/bf16430f7750c023141c562f3e9f2a91>`_
     """
-    import torch
-    if not (torch.is_tensor(tensor) or
-            (isinstance(tensor, list) and all(torch.is_tensor(t) for t in tensor))):
+    if not (th.is_tensor(tensor) or
+            (isinstance(tensor, list) and all(th.is_tensor(t) for t in tensor))):
         raise TypeError('tensor or list of tensors expected, got {}'.format(type(tensor)))
 
     # if list of tensors, convert to a 4D mini-batch Tensor
     if isinstance(tensor, list):
-        tensor = torch.stack(tensor, dim=0)
+        tensor = th.stack(tensor, dim=0)
 
     if tensor.dim() == 2:  # single image H x W
         tensor = tensor.unsqueeze(0)
     if tensor.dim() == 3:  # single image
         if tensor.size(0) == 1:  # if single-channel, convert to 3-channel
-            tensor = torch.cat((tensor, tensor, tensor), 0)
+            tensor = th.cat((tensor, tensor, tensor), 0)
         tensor = tensor.unsqueeze(0)
 
     if tensor.dim() == 4 and tensor.size(1) == 1:  # single-channel images
-        tensor = torch.cat((tensor, tensor, tensor), 1)
+        tensor = th.cat((tensor, tensor, tensor), 1)
 
     if normalize is True:
         tensor = tensor.clone()  # avoid modifying tensor in-place
@@ -389,7 +386,7 @@ def make_grid(tensor, nrow: int = 1, padding: int = 50, normalize: bool = False,
             if k >= nmaps:
                 break
             # Tensor.copy_() is a valid method but seems to be missing from the stubs
-            # https://pytorch.org/docs/stable/tensors.html#torch.Tensor.copy_
+            # https://pytorch.org/docs/stable/tensors.html#th.Tensor.copy_
             x1, y1 = x * width + padding,  y * height + padding
             x2, y2 =  x1 + tensor.size(3), y1 + tensor.size(2)
             coordinates.append((x1, y1, x2, y2))
@@ -411,8 +408,7 @@ def split_boxes(img_coordinates, boxes, boxes_scores=None):
     Returns:
         split boxes based on image coordinates (List(Tupe(Tensor[N,4], Tensor[N,1])))
     """
-    import torch
-    if not torch.is_tensor(img_coordinates) and torch.is_tensor(boxes):
+    if not th.is_tensor(img_coordinates) and th.is_tensor(boxes):
         raise TypeError('Input arguments must be torch tensors')
 
     from torchvision.ops.boxes import box_iou
@@ -422,10 +418,10 @@ def split_boxes(img_coordinates, boxes, boxes_scores=None):
     results = []
     for i, img_coordinate in enumerate(img_coordinates):
         non_zero = (iou[i] != 0).nonzero()
-        flattened_non_zero = torch.flatten(non_zero)
-        final_boxes = torch.index_select(boxes, 0, flattened_non_zero)
+        flattened_non_zero = th.flatten(non_zero)
+        final_boxes = th.index_select(boxes, 0, flattened_non_zero)
         if not isinstance(boxes_scores, type(None)):
-            final_boxes_scores = torch.index_select(boxes_scores, 0, flattened_non_zero)
+            final_boxes_scores = th.index_select(boxes_scores, 0, flattened_non_zero)
             results.append((final_boxes, final_boxes_scores))
         else:
             results.append((final_boxes))
@@ -434,9 +430,8 @@ def split_boxes(img_coordinates, boxes, boxes_scores=None):
        
 
 def imshow(img, scale=1, title='', **kwargs):
-    import torch
     if type(img) is list and isTorch(img[0]):
-        img = torch.cat(img, 2)
+        img = torcoch.cat(img, 2)
 
     if isTorch(img):
         img = fromTorch(img)
@@ -450,6 +445,56 @@ def imshow(img, scale=1, title='', **kwargs):
         destroyAllWindows()
 
 # OpenCV only
+
+def render(img,
+            result,
+            classes=None,
+            score_thr=None,
+            show=True,
+            wait_time=0,
+            path=None,
+            xcycwh=False):
+    """Visualize the detection on the image and optionally save to a file.
+    Args:
+        img(BGR): CV2 BGR.
+        result(Tensor[K, 6] or List[(tid, Tensor[6]))+]): detection result in xyxysc
+        classes(list[str] or tuple[str]): A list of trained class names
+        score_thr(float): The threshold to visualize the bboxes and masks.
+        tracking(bool): Whether the results are tracking
+        wait_time (int): Value of waitKey param for display
+        path(str, optional): path to save the rendered image
+    """
+    from ml import cv
+    labels = colors = None
+    img = np.ascontiguousarray(img)
+    if th.is_tensor(result):
+        # Detection only
+        if score_thr:
+            result = result[result[:, 4] >= score_thr]
+        labels = [classes[c.int()] for c in result[:, 5]] if classes else [f"{int(c)}" for c in result[:, 5]]
+        colors = [COLORS91[c.int()] for c in result[:, 5]]
+        cv.drawBoxes(img, result[:, :4], labels=labels, scores=result[:, 4], colors=colors)
+    elif result:
+        # Detection with tracking [(tid, xyxysc)*]
+        tids, boxes = list(zip(*result))
+        result = th.stack(boxes)
+        if score_thr:
+            result = result[result[:, 4] >= score_thr]
+        if classes:
+            labels = [f"{classes[c.int()]}[{tid}]" for tid, c in zip(tids, result[:, 5])]
+        else:
+            labels = [f"[{int(c)}][{tid}]" for tid, c in zip(tids, result[:, 5])]
+        colors = [COLORS91[c.int()] for c in result[:, 5]]
+        cv.drawBoxes(img, result[:, :4], labels=labels, scores=result[:, 4], colors=colors)
+        logging.info(f"tracking {tuple(labels)}")
+    else:
+        logging.info(f"No RoIs to render")
+    path = path and Path(path) or None
+    if sys.x_available() and show:
+        cv.imshow(img, title=str(path) or '')
+    if path:
+        cv.save(img, path)
+    return img
 
 def drawBox(img, xyxy, color=None, label=None, thickness=None):
     tl = thickness or round(0.002 * (img.shape[0] + img.shape[1]) / 2) + 1
