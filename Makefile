@@ -89,6 +89,7 @@ co: checkout
 
 pull: co
 	git submodule update --remote --merge --recursive
+	git pull
 
 merge:
 	git checkout master
