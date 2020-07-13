@@ -1,3 +1,5 @@
+from pathlib import Path
+from time import time
 from torch.hub import *
 from ml import logging
 
@@ -8,6 +10,104 @@ def _get_ml_home():
             os.getenv(ENV_ML_HOME,
                       os.path.join(os.getenv(ENV_XDG_CACHE_HOME,
                                              DEFAULT_CACHE_DIR), 'ml')))
+
+def upload_s3(path, bucket, key):
+    '''
+    Args:
+        bucket(str): S3 bucket name
+        key(str): key to upload to the bucket where the ending '/' matters
+    Kwargs:
+        path(str): path to the file to upload
+    '''
+    try:
+        import botocore, boto3
+        from botocore.exceptions import ClientError
+    except ImportError as e:
+        logging.warning(f'botocore and boto3 are required to download from S3: {e}')
+        return False
+    else:
+        path = Path(path)
+        key = Path(key).name == path.name and key or f"{key}/{path.name}"
+        # s3 = boto3.client('s3', config=botocore.client.Config(max_pool_connections=50))
+        s3 = boto3.resource('s3').meta.client
+        if not path.is_file():
+            logging.error(f"{path} not exist or not a file to upload")
+            return False
+        total = 0
+        start = time()
+        def callback(bytes):
+            nonlocal total
+            total += bytes
+            elapse = time() - start
+            if total < 1024:
+                print(f"\rUploaded {total:4d} bytes at {total / elapse:.2f} bytes/s", end='')
+            elif total < 1024**2:
+                KB = total / 1024
+                print(f"\rUploaded {KB:4.2f}KB at {KB/elapse:4.2f} KB/s", end='')
+            else:
+                MB = total / 1024**2
+                print(f"\rUploaded {MB:8.2f}MB at {MB/elapse:6.2f} MB/s", end='')
+            sys.stdout.flush()
+        try:
+            print(path, bucket, key)
+            s3.upload_file(str(path), bucket, key, Callback=callback)
+        except ClientError as e:
+            print()
+            logging.error(f"Failed to upload {path} to s3://{bucket}/{key}: {e}")
+        else:
+            print()
+            logging.info(f"Succeeded to upload {path} to s3://{bucket}/{key}")
+        return True
+
+def download_s3(bucket, key, path='.', force=False):
+    '''
+    Args:
+        bucket(str): S3 bucket name
+    Kwargs:
+        path(str): directory to save the downloaded file named by the key or the target path to save
+    '''
+    try:
+        import botocore, boto3
+        from botocore.exceptions import ClientError
+    except ImportError as e:
+        logging.warning(f'botocore and boto3 are required to download from S3: {e}')
+        return False
+    else:
+        s3 = boto3.client('s3', config=botocore.client.Config(max_pool_connections=50))
+        path = Path(path)
+        if path.is_dir():
+            path /= Path(key).name
+        if path.is_file():
+            if force:
+                path.unlink()
+                logging.warning(f"Removed existing download: {path}")
+            else:
+                logging.warning(f"Download exists: {path}, specify force=True to remove if necessary")
+                return False
+        total = 0
+        start = time()
+        def callback(bytes):
+            nonlocal total
+            total += bytes
+            elapse = time() - start
+            if total < 1024:
+                print(f"\rDownloaded {total:4d} bytes at {total / elapse:.2f} bytes/s", end='')
+            elif total < 1024**2:
+                KB = total / 1024
+                print(f"\rDownloaded {KB:4.2f}KB at {KB/elapse:4.2f} KB/s", end='')
+            else:
+                MB = total / 1024**2
+                print(f"\rDownloaded {MB:8.2f}MB at {MB/elapse:6.2f} MB/s", end='')
+            sys.stdout.flush()
+        try:
+            s3.download_file(bucket, key, str(path), Callback=callback)
+        except ClientError as e:
+            print()
+            logging.error(f"Failed to download s3://{bucket}/{key} to {path}: {e}")
+        else:
+            print()
+            logging.info(f"Succeeded to download s3://{bucket}/{key} to {path}")
+        return True
 
 def download_gdrive(id='1mM8aZJlWTxOg7BZJvNUMrTnA2AbeCVzS', path='/tmp/yolov5x.pt', force=False):
     # https://gist.github.com/tanaikech/f0f2d122e05bf5f971611258c22c110f
@@ -86,17 +186,3 @@ def load_state_dict_from_gdrive(id, filename, model_dir=None, map_location=None,
             extraced_name = members[0].filename
             cached_file = os.path.join(model_dir, extraced_name)
     return torch.load(cached_file, map_location=map_location)    
-
-# download_url_to_file(url, dst, hash_prefix=None, progress=True):
-'''
-def download(url, path, force=False):
-    path = Path(path)
-    res = 0
-    if not path.exists() or force:
-        cmd = f"curl -LJfq {url} -o {path}"
-        logging.info(f"Downloading {url}...")
-        logging.info(cmd)
-        res = os.system(cmd)
-    logging.info(f"Downloaded {url} to {path}")
-    return res == 0 and os.path.exists(path)
-'''
