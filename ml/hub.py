@@ -63,6 +63,7 @@ def download_s3(bucket, key, path='.', force=False):
     '''
     Args:
         bucket(str): S3 bucket name
+        key(str): path to a file to download in the bucket
     Kwargs:
         path(str): directory to save the downloaded file named by the key or the target path to save
     '''
@@ -83,7 +84,7 @@ def download_s3(bucket, key, path='.', force=False):
                 logging.warning(f"Removed existing download: {path}")
             else:
                 logging.warning(f"Download exists: {path}, specify force=True to remove if necessary")
-                return False
+                return True
         total = 0
         start = time()
         def callback(bytes):
@@ -104,10 +105,49 @@ def download_s3(bucket, key, path='.', force=False):
         except ClientError as e:
             print()
             logging.error(f"Failed to download s3://{bucket}/{key} to {path}: {e}")
+            return False
         else:
             print()
             logging.info(f"Succeeded to download s3://{bucket}/{key} to {path}")
-        return True
+            return True
+
+def load_state_dict_from_s3(bucket, key, filename, model_dir=None, map_location=None, force_reload=False, progress=True, check_hash=False):
+    if model_dir is None:
+        # Otherwise, hub_dir would be used.
+        ml_home = _get_ml_home()
+        model_dir = os.path.join(ml_home, 'checkpoints')
+
+    try:
+        os.makedirs(model_dir)
+    except OSError as e:
+        if e.errno == errno.EEXIST:
+            # Directory already exists, ignore.
+            pass
+        else:
+            # Unexpected OSError, re-raise.
+            raise
+
+    path = f"{model_dir}/{filename}"
+    if True:
+        if not download_s3(bucket, key, path, force=force_reload):
+            raise IOError(f"Failed to download to {path}")
+    else:
+        if download_gdrive(id, path, force=force_reload) != 0:
+            raise IOError(f"Failed to download to {path}")
+
+    # Note: extractall() defaults to overwrite file if exists. No need to clean up beforehand.
+    #       We deliberately don't handle tarfile here since our legacy serialization format was in tar.
+    #       E.g. resnet18-5c106cde.pth which is widely used.
+    cached_file = path
+    if zipfile.is_zipfile(cached_file):
+        with zipfile.ZipFile(cached_file) as cached_zipfile:
+            members = cached_zipfile.infolist()
+            if len(members) != 1:
+                raise RuntimeError('Only one file(not dir) is allowed in the zipfile')
+            cached_zipfile.extractall(model_dir)
+            extraced_name = members[0].filename
+            cached_file = os.path.join(model_dir, extraced_name)
+    return torch.load(cached_file, map_location=map_location)    
 
 def download_gdrive(id='1mM8aZJlWTxOg7BZJvNUMrTnA2AbeCVzS', path='/tmp/yolov5x.pt', force=False):
     # https://gist.github.com/tanaikech/f0f2d122e05bf5f971611258c22c110f
