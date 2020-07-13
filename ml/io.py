@@ -75,7 +75,7 @@ def save(data, path, meta=None, complevel=6, complib='blosc:zstd', bitshuffle=Tr
         database.close()
     elif path.suffix in ['.pt', '.pth']:
         import torch as th
-        th.save(data, path)
+        th.save(data, path, **kwargs)
     elif path.suffix in ['.pkl']:
         with open(path, 'wb') as pkl:
             pickle.dump(data, pkl, protocol=pickle.HIGHEST_PROTOCOL)        
@@ -95,7 +95,7 @@ def load(path, **kwargs):
             return tables.open_file(path, mode=mode, **kwargs)
     elif path.suffix in ['.pt', '.pth']:
         import torch as th
-        return th.load(path)
+        return th.load(path, **kwargs)
     elif path.suffix in ['.pkl']:
         with open(path, mode if 'b' in mode else f"b{mode}") as pkl:
             return pickle.load(pkl)
