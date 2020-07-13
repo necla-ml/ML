@@ -4,6 +4,12 @@ from itertools import tee, chain
 import sys
 import pprint
 
+def rewrite(labels, rewrites):
+    if rewrites:
+        for k, v in rewrites.items():
+            idx = labels.index(k)
+            if idx >= 0:
+                labels[idx] = v
 
 def printable(v):
     if callable(v):
