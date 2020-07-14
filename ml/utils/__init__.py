@@ -18,7 +18,6 @@ NestedDict = lambda: defaultdict(NestedDict)
 def area(bbox):
     return (bbox[2] - bbox[0]) * (bbox[3] - bbox[1])
 
-
 def intersect(bbox1, bbox2):
     left = bbox1[0] if bbox1[0] > bbox2[0] else bbox2[0]
     top = bbox1[1] if bbox1[1] > bbox2[1] else bbox2[1]
@@ -28,7 +27,6 @@ def intersect(bbox1, bbox2):
         return [0, 0, 0, 0]
 
     return [left, top, right, bottom]
-
 
 def iou(bbox1, bbox2):
     area1 = area(bbox1)

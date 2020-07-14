@@ -4,12 +4,21 @@ from itertools import tee, chain
 import sys
 import pprint
 
-def rewrite(labels, rewrites):
+def rewrite(labels, rewrites, inplace=False):
+    """
+    Args:
+        labels(List[str]): list of class labels
+        rewrites(dict): mapping from target to source labels to rewrite
+    """
     if rewrites:
-        for k, v in rewrites.items():
-            idx = labels.index(k)
-            if idx >= 0:
-                labels[idx] = v
+        labels = inplace and labels or list(labels)
+        for target, sources in rewrites.items():
+            if not isinstance(sources, list):
+                sources = [sources]
+            for src in sources:
+                idx = labels.index(src)
+                labels[idx] = target
+    return labels
 
 def printable(v):
     if callable(v):
