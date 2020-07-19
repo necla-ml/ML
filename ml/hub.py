@@ -11,6 +11,15 @@ def _get_ml_home():
                       os.path.join(os.getenv(ENV_XDG_CACHE_HOME,
                                              DEFAULT_CACHE_DIR), 'ml')))
 
+def repo(github, force_reload=False, verbose=True):
+    # pytorch-1.5.1 applicable
+    from torch.hub import _get_cache_or_reload
+    import os
+    hubdir = f"{_get_ml_home()}/hub"
+    os.makedirs(hubdir, exist_ok=True)
+    set_dir(hubdir)
+    return _get_cache_or_reload(github, force_reload, verbose)
+
 def upload_s3(path, bucket, key):
     '''
     Args:
