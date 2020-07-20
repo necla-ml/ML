@@ -59,7 +59,11 @@ class H5Database(object):
     def __del__(self):
         self.close()
 
-def save(data, path, meta=None, complevel=6, complib='blosc:zstd', bitshuffle=True, **kwargs):
+def save(data, path, meta=None, complevel=6, complib='blosc:zstd', bitshuffle=True, softlinks=None, **kwargs):
+    """
+    Args:
+        softlinks(dict): mapping from src node to target node
+    """
     path = Path(path)
     if path.suffix in ['.h5', '.hd5']:
         # TODO arbitrary levels
@@ -71,6 +75,9 @@ def save(data, path, meta=None, complevel=6, complib='blosc:zstd', bitshuffle=Tr
             if th.is_tensor(d):
                 d = d.cpu().detach().numpy()
             database.create_carray("/", name, obj=d, filters=filters)
+        if softlinks:
+            for src, target in softlinks.items():
+                database.create_soft_link("/", src, f"/{target}")
         database.root._v_attrs.meta = meta
         database.close()
     elif path.suffix in ['.pt', '.pth']:
