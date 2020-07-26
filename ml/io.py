@@ -47,8 +47,14 @@ class H5Database(object):
     def items(self):
         return self.__dict__.items()
 
+    def __contains__(self, key):
+        return key in self.__dict__
+ 
+    def __getattr__(self, key):
+        return self[key]
+    
     def __getitem__(self, key):
-        return self.__dict__[key]
+        return self.__dict__.get(key, None)
 
     def __setitem__(self, key, value):
         self.__dict__[key] = value
@@ -74,7 +80,8 @@ def save(data, path, meta=None, complevel=6, complib='blosc:zstd', bitshuffle=Tr
         for name, d in data.items():
             if th.is_tensor(d):
                 d = d.cpu().detach().numpy()
-            database.create_carray("/", name, obj=d, filters=filters)
+            if d is not None and len(d) > 0:
+                database.create_carray("/", name, obj=d, filters=filters)
         if softlinks:
             for src, target in softlinks.items():
                 database.create_soft_link("/", src, f"/{target}")
@@ -111,4 +118,6 @@ def load(path, **kwargs):
             return eval(f.read())
 
 def close_all():
+    import tables
     tables.file._open_files.close_all()
+    print('close_all() done')
