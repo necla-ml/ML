@@ -452,8 +452,7 @@ def render(img,
             score_thr=None,
             show=True,
             wait_time=0,
-            path=None,
-            xcycwh=False):
+            path=None):
     """Visualize the detection on the image and optionally save to a file.
     Args:
         img(BGR): CV2 BGR.
@@ -473,6 +472,7 @@ def render(img,
             result = result[result[:, 4] >= score_thr]
         labels = [classes[c.int()] for c in result[:, 5]] if classes else [f"{int(c)}" for c in result[:, 5]]
         colors = [COLORS91[c.int()] for c in result[:, 5]]
+        logging.debug(f"Drawing detection: {result} with labels={labels}")
         cv.drawBoxes(img, result[:, :4], labels=labels, scores=result[:, 4], colors=colors)
     elif result:
         # Detection with tracking [(tid, xyxysc)*]
@@ -486,9 +486,9 @@ def render(img,
             labels = [f"[{int(c)}][{tid}]" for tid, c in zip(tids, result[:, 5])]
         colors = [COLORS91[c.int()] for c in result[:, 5]]
         cv.drawBoxes(img, result[:, :4], labels=labels, scores=result[:, 4], colors=colors)
-        logging.info(f"tracking {tuple(labels)}")
+        logging.debug(f"Tracking {tuple(labels)}")
     else:
-        logging.info(f"No RoIs to render")
+        logging.warning(f"No RoIs to render")
     path = path and Path(path) or None
     if sys.x_available() and show:
         cv.imshow(img, title=str(path) or '')
