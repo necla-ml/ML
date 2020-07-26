@@ -11,6 +11,24 @@ def _get_ml_home():
                       os.path.join(os.getenv(ENV_XDG_CACHE_HOME,
                                              DEFAULT_CACHE_DIR), 'ml')))
 
+def parse(url):
+    if url.startswith('s3://'):
+        parts = url[len('s3://'):].split('/')
+        key = '/'.join(parts[1:])
+        return dict(
+            bucket=parts[0],
+            key=key,
+            name=parts[-1],
+        )
+    else:
+        return None
+
+def github(owner, project, tag=None):
+    if tag is None:
+        return f"{owner}/{project}"
+    else:
+        return f"{owner}/{project}:{tag}"
+
 def repo(github, force_reload=False, verbose=True):
     # pytorch-1.5.1 applicable
     from torch.hub import _get_cache_or_reload
@@ -23,10 +41,9 @@ def repo(github, force_reload=False, verbose=True):
 def upload_s3(path, bucket, key):
     '''
     Args:
+        path(str): path to the file to upload
         bucket(str): S3 bucket name
         key(str): key to upload to the bucket where the ending '/' matters
-    Kwargs:
-        path(str): path to the file to upload
     '''
     try:
         import botocore, boto3
@@ -35,9 +52,8 @@ def upload_s3(path, bucket, key):
         logging.warning(f'botocore and boto3 are required to download from S3: {e}')
         return False
     else:
+        # XXX Amazon S3 supports buckets and objects, and there is no hierarchy.
         path = Path(path)
-        key = Path(key).name == path.name and key or f"{key}/{path.name}"
-        # s3 = boto3.client('s3', config=botocore.client.Config(max_pool_connections=50))
         s3 = boto3.resource('s3').meta.client
         if not path.is_file():
             logging.error(f"{path} not exist or not a file to upload")
@@ -137,12 +153,8 @@ def load_state_dict_from_s3(bucket, key, filename, model_dir=None, map_location=
             raise
 
     path = f"{model_dir}/{filename}"
-    if True:
-        if not download_s3(bucket, key, path, force=force_reload):
-            raise IOError(f"Failed to download to {path}")
-    else:
-        if download_gdrive(id, path, force=force_reload) != 0:
-            raise IOError(f"Failed to download to {path}")
+    if not download_s3(bucket, key, path, force=force_reload):
+        raise IOError(f"Failed to download to {path}")
 
     # Note: extractall() defaults to overwrite file if exists. No need to clean up beforehand.
     #       We deliberately don't handle tarfile here since our legacy serialization format was in tar.
