@@ -215,6 +215,8 @@ def download_gdrive(id='1mM8aZJlWTxOg7BZJvNUMrTnA2AbeCVzS', path='/tmp/yolov5x.p
     return r
 
 def load_state_dict_from_gdrive(id, filename, model_dir=None, map_location=None, force_reload=False, progress=True, check_hash=False):
+    """Assume the downloaded file is saved by torch directly through `torch.save()` in zip format since pytorch-1.6.
+    """
     if model_dir is None:
         # Otherwise, hub_dir would be used.
         ml_home = _get_ml_home()
@@ -234,10 +236,11 @@ def load_state_dict_from_gdrive(id, filename, model_dir=None, map_location=None,
     if download_gdrive(id, path, force=force_reload) != 0:
         raise IOError(f"Failed to download to {path}")
 
+    cached_file = path
+    '''
     # Note: extractall() defaults to overwrite file if exists. No need to clean up beforehand.
     #       We deliberately don't handle tarfile here since our legacy serialization format was in tar.
     #       E.g. resnet18-5c106cde.pth which is widely used.
-    cached_file = path
     if zipfile.is_zipfile(cached_file):
         with zipfile.ZipFile(cached_file) as cached_zipfile:
             members = cached_zipfile.infolist()
@@ -246,4 +249,5 @@ def load_state_dict_from_gdrive(id, filename, model_dir=None, map_location=None,
             cached_zipfile.extractall(model_dir)
             extraced_name = members[0].filename
             cached_file = os.path.join(model_dir, extraced_name)
+    '''
     return torch.load(cached_file, map_location=map_location)    
