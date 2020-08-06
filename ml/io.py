@@ -21,9 +21,15 @@ class H5Database(object):
     def __init__(self, h5, tensorize=True):
         self.meta = None
         self.h5 = h5
-        if 'meta' in h5.attrs:
-            import pickle
-            self.meta = pickle.loads(h5.attrs['meta'])
+        # Restore non-numpy objects from attributes
+        import pickle
+        for k, v in h5.attrs.items():
+            if k not in ['CLASS', 'PYTABLES_FORMAT_VERSION', 'TITLE', 'VERSION']:
+                try:
+                    self[k] = pickle.loads(h5.attrs[k])
+                except Exception as e:
+                    logging.warning(f"{e} for {k}={v}")
+                    self[k] = v
 
         import torch as th
         for key in h5.keys():
@@ -82,6 +88,8 @@ def save(data, path, meta=None, complevel=6, complib='blosc:zstd', bitshuffle=Tr
                 d = d.cpu().detach().numpy()
             if d is not None and len(d) > 0:
                 database.create_carray("/", name, obj=d, filters=filters)
+            else:
+                database.root._v_attrs[name] = d
         if softlinks:
             for src, target in softlinks.items():
                 database.create_soft_link("/", src, f"/{target}")
