@@ -35,7 +35,11 @@ class SequenceRuleEngine(object):
         stage = stage.strip().lower()
         
         def cls2chr(m):
-            return self.id2chr[self.cls2id[m.group(0)]]
+            cls = m.group(0)
+            if cls == 'anything':
+                return f"[{self.id2chr[0]}-{self.id2chr[-1]}]"
+            else:
+                return self.id2chr[self.cls2id[cls]]
 
         def repeat(m):
             return f"{{{m.group(1)},}}"
