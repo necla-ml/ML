@@ -6,11 +6,13 @@ from requests_toolbelt.multipart.decoder import *
 from ml import io, logging
 
 __all__ = [
-    'HTTPError',
+    'HTTPError',            # HTTP related
     'HTTPStatus',
     'HTTPRequest',
     'HTTPRequestStreamDecoder',
     'MultipartStreamDecoder',
+    'RequestException',     # Anything else
+    'Timeout',              # ConnectionTimeout, ReadTime
 ]
 
 # Suppress unnecessary warnings from urllib3
@@ -98,7 +100,7 @@ class MultipartStreamDecoder(MultipartDecoder):
     def __iter__(self):
         return self.parts
 
-from requests.exceptions import RequestException, HTTPError
+from requests.exceptions import RequestException, HTTPError, Timeout
 from http.client import HTTPException
 from http import HTTPStatus
 import http
