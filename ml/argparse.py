@@ -1,3 +1,4 @@
+from pathlib import Path
 import argparse
 import re
 
@@ -5,13 +6,17 @@ from .utils.config import Config
 from ml import logging
 
 class ConfigAction(argparse.Action):
-    def __inint__(self, opt, dest, help='specify an external config to load options', **kwargs):
+    def __inint__(self, opt, dest, help='Specify an external config to load options', **kwargs):
         super(ConfigAction, self).__init__(opt, 'cfg', help=help, **kwargs)
 
     def __call__(self, parser, args, path, opt):
         r"""Parse and combine command line options with a configuration file if specified.
         """
-
+        path = Path(path)
+        if not path.exists():
+            from importlib import import_module
+            path = Path(import_module(parser.__module__).__file__).parent / "configs" / path.name
+            logging.info(f"Loading by default from {path}")
         cfg = Config()
         cfg.load(path)
         for k, v in vars(cfg).items():
