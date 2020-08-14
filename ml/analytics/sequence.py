@@ -1,7 +1,10 @@
 import re
+import shlex
 from ml import logging
+from ml.utils import Config
 
 PATTERNS = dict(
+    label=re.compile(r"(\"\w[\s\w]*\"|\'\w[\s\w]*\'|[a-zA-Z_]\w*)"),
     repetition=re.compile(r'>=(\d+)')
 )
 
@@ -25,26 +28,31 @@ def encode(labels):
 
 class SequenceRuleEngine(object):
     def __init__(self, labels, delimiter='->'):
+        assert 'anything' not in labels, f"'anything' is already a reserved label"
         codebook = encode(labels)
         self.cls2id = codebook['cls2id']
         self.id2chr = codebook['id2chr']
         self.id2cls = codebook['id2cls']
         self.delimiter = delimiter
+        logging.info(f"Rule codebook\n{Config({label: self.id2chr[self.cls2id[label]] for label in labels})}")
     
     def parse(self, stage):
         stage = stage.strip().lower()
-        
-        def cls2chr(m):
-            cls = m.group(0)
-            if cls == 'anything':
-                return f"[{self.id2chr[0]}-{self.id2chr[-1]}]"
-            else:
-                return self.id2chr[self.cls2id[cls]]
-
         def repeat(m):
             return f"{{{m.group(1)},}}"
 
-        stage = re.sub(r'[_a-zA-Z]+', cls2chr, stage)
+        """
+        label must be a quoted string or 
+        """
+        def cls2chr(m):
+            cls = m.group(0).strip("\"\' ")
+            if cls == 'anything':
+                return f"[{self.id2chr[0]}-{self.id2chr[-1]}]"
+            else:
+                # logging.info(m, cls)
+                return self.id2chr[self.cls2id[cls]]
+        # logging.info(f"stage: {stage}")
+        stage = re.sub(PATTERNS['label'], cls2chr, stage)
         stage = re.sub(r'\s+', '', stage)
         return re.sub(PATTERNS['repetition'], repeat, stage)
 

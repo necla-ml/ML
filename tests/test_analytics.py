@@ -5,7 +5,9 @@ from random import randrange as rrange
 from ml.analytics import SequenceRuleEngine
 from ml import logging
 
-logging.getLogger().setLevel('INFO')
+@pytest.fixture
+def beer_run():
+    return "retrieving_items>=2 -> (walking | 'walking items' | \"walking_items\" | nothing)* -> ('entering' | exiting)+"
 
 @pytest.fixture
 def shoplifting():
@@ -14,6 +16,33 @@ def shoplifting():
 @pytest.fixture
 def falling():
     return "(Standing | Sitting | Walking | Running)>=3 -> Lying_on_floor>=3"
+
+def test_beer_run(beer_run):
+    print()
+    labels = [
+        'standing',
+        'sitting',
+        'walking',
+        'running',
+        'grabbing',
+        'inspection',
+        'concealing',
+        'lying_on_floor',
+        'walking items',
+        'walking_items',
+        'retrieving_items',
+        'returning_items',
+        'concealing_items',
+        'entering',
+        'entering123',
+        '123entering',
+        'exiting',
+        'nothing',
+    ]
+    engine = SequenceRuleEngine(labels, '->')
+    rule = engine.compile(beer_run)
+    logging.info(f"rule={beer_run}")
+    logging.info(f"compiled={rule}")
 
 def test_shoplifting(shoplifting):
     print()
