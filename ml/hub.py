@@ -18,18 +18,19 @@ SPECS = dict(
 )
 
 def parse(url):
-    if url.startswith(SPECS['s3']):
-        parts = url[len(SPECS['s3']):].split('/')
-        key = '/'.join(parts[1:])
+    spec = urlparse(url)
+    if spec == 's3':
+        key = spec.path[1:]
         return dict(
-            bucket=parts[0],
-            key=key,
-            name=parts[-1],
+            scheme='s3://',
+            bucket=spec.netloc,
+            key=spec.path[1:],
+            name=os.path.basename(key),
         )
-    elif url.startswith(SPECS['github']):
+    elif spec.netloc == 'github.com':
         # https://github.com/ultralytics/yolov5/releases/download/v3.0/yolov5x.pt
-        parts = url[len(SPECS['github']):].split('/')
-        owner, project, tag, name = parts[0], parts[1], parts[4], parts[5]
+        path = Path(spec.path)
+        owner, project, tag, name = path.parents[4].name, path.parents[3].name, path.parent.name, path.name
         return dict(
             owner=owner,
             project=project, 
