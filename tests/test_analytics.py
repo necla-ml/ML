@@ -17,6 +17,7 @@ def shoplifting():
 def falling():
     return "(Standing | Sitting | Walking | Running)>=3 -> Lying_on_floor>=3"
 
+@pytest.mark.essential
 def test_beer_run(beer_run):
     print()
     labels = [
@@ -44,6 +45,7 @@ def test_beer_run(beer_run):
     logging.info(f"rule={beer_run}")
     logging.info(f"compiled={rule}")
 
+@pytest.mark.essential
 def test_shoplifting(shoplifting):
     print()
     labels = [
@@ -90,6 +92,7 @@ def test_shoplifting(shoplifting):
         logging.info(f"matches={matches}")
         assert not matches
 
+@pytest.mark.essential
 def test_falling(falling):
     print()
     labels = [

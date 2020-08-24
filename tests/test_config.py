@@ -5,7 +5,6 @@ import yaml
 
 from ml.utils import Config
 
-
 @pytest.fixture
 def cfg():
     return Config({
@@ -14,13 +13,13 @@ def cfg():
         'logging': {'priority': 1},
     }, key=[1, 'bb', 4])#, logging={'level': 4})
 
-
+@pytest.mark.essential
 def test_repr(cfg):
     repr = cfg.__repr__()
     str  = cfg.__str__()
     assert eval(repr) == cfg
 
-
+@pytest.mark.essential
 def test_save_load(cfg, tmpdir):
     import tempfile as tf
     with tf.TemporaryDirectory() as tmp:

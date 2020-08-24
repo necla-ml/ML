@@ -1,5 +1,7 @@
+import pytest
 from ml import plot, logging
 
+@pytest.mark.essential
 def test_confusion_matrix():
     import torch
     from sklearn.metrics import confusion_matrix
