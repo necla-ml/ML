@@ -5,10 +5,15 @@ import matplotlib.pyplot as plt
 from ml import io
 matplotlib.use('Agg')
 
+plt.rcParams.update({'figure.max_open_warning': 2})
+
 def set(param, value):
     matplotlib.rcParams[param] = value
 
-def close(fig):
+def fignums():
+    return plt.get_fignums()
+
+def close(fig=None):
     plt.close(fig)
 
 def save(fig, path, format='png', close=True):
@@ -61,7 +66,9 @@ def confusion_matrix(cm, labels=None, title=None, size=8, dpi=100, interpolation
     if isinstance(size, int):
         size = (size, size)
 
-    plt.clf()
+    #plt.cla()
+    #plt.clf()
+    #plt.close()
     figure = plt.figure(figsize=size, dpi=dpi)
     
     # Round the confusion matrix.
