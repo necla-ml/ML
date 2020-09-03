@@ -34,7 +34,7 @@ class SequenceRuleEngine(object):
         self.id2chr = codebook['id2chr']
         self.id2cls = codebook['id2cls']
         self.delimiter = delimiter
-        logging.info(f"Rule codebook\n{Config({label: self.id2chr[self.cls2id[label]] for label in labels})}")
+        logging.debug(f"Rule codebook\n{Config({label: self.id2chr[self.cls2id[label]] for label in labels})}")
     
     def parse(self, stage):
         stage = stage.strip().lower()
