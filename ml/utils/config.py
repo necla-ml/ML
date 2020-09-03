@@ -95,7 +95,7 @@ class Config(dict):
         return f"{self.__class__.__name__}({self.__dict__})"
 
     def __str__(self):
-        return pprint.pformat(self.__dict__)
+        return pprint.pformat(self.__dict__, indent=4)
 
     def __getstate__(self):
         return self.__dict__
