@@ -9,24 +9,43 @@ class ConfigAction(argparse.Action):
     def __inint__(self, opt, dest, help='Specify an external config to load options', **kwargs):
         super(ConfigAction, self).__init__(opt, 'cfg', help=help, **kwargs)
 
-    def __call__(self, parser, args, path, opt):
+    def __call__(self, parser, args, values, opt):
         r"""Parse and combine command line options with a configuration file if specified.
         """
-        path = Path(path)
-        if not path.exists():
-            from importlib import import_module
-            path = Path(import_module(parser.__module__).__file__).parent / "configs" / path.name
-            logging.info(f"Loading by default from {path}")
-        cfg = Config()
-        cfg.load(path)
-        for k, v in vars(cfg).items():
-            field = args.__dict__.get(k)
-            if isinstance(field, Config):
-                field.update(v)
+        # print(f"values={values}")
+        for value in values:
+            if '=' in value:
+                # assignement
+                k, v = value.split('=')
+                parts = k.split('.')
+                key = parts[-1]
+                parts = parts[:-1]
+                # print(f"assignment: '{value}', parts={parts}, key={key}")
+                cfg = vars(args)
+                # print('cfg:', cfg)
+                for part in parts:
+                    if part not in cfg or not isinstance(cfg[part], Config):
+                        cfg[part] = Config()
+                    cfg = cfg[part]
+                
+                import yaml
+                v = yaml.safe_load(v)
+                cfg[key] = v
             else:
-                args.__dict__[k] = v
-
-        return
+                # path to config
+                path = Path(value)
+                if not path.exists():
+                    from importlib import import_module
+                    path = Path(import_module(parser.__module__).__file__).parent / "configs" / path.name
+                    logging.info(f"Loading by default from {path}")
+                cfg = Config()
+                cfg.load(path)
+                for k, v in vars(cfg).items():
+                    field = args.__dict__.get(k)
+                    if isinstance(field, Config):
+                        field.update(v)
+                    else:
+                        args.__dict__[k] = v
 
 class ArgumentParser(argparse.ArgumentParser):
     r"""Allow no '=' in an argument config as a regular command line
@@ -36,7 +55,7 @@ class ArgumentParser(argparse.ArgumentParser):
         char = kwargs.get("fromfile_prefix_chars", '@')
         kwargs["fromfile_prefix_chars"] = char
         super(ArgumentParser, self).__init__(*args, **kwargs)
-        self.add_argument("--cfg", action=ConfigAction, help="path to a configuration file in YAML/JSON or a Python module")
+        self.add_argument("--cfg", action=ConfigAction, nargs='+', help="path to a configuration file in YAML/JSON or a Python module")
         
         # App/Logging
         self.add_argument('-d', '--daemon', action='store_true',                                                help='Daemonize to detach from the shell')

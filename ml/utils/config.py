@@ -42,7 +42,7 @@ def _include(loader: Loader, node: yaml.Node) -> Any:
 yaml.add_constructor('!include', _include, Loader)
 
 # XXX Accept scientific notation without decimal point in case of YAML 1.1
-Loader.add_implicit_resolver(
+yaml.resolver.Resolver.add_implicit_resolver(
     u'tag:yaml.org,2002:float',
     re.compile(u'''^(?:
      [-+]?(?:[0-9][0-9_]*)\\.[0-9_]*(?:[eE][-+]?[0-9]+)?
