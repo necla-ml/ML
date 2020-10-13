@@ -1,169 +1,204 @@
 import numpy as np
-import tensorrt as trt
-from tensorrt import volume, Dims
-from ml import logging
+import torch as th
+from ml import io, logging
+from .utils import GiB
 
-from ._cuda import (
-    HostDeviceMem,
-    EXPLICIT_BATCH,
-    GiB,
-    add_help,
-    allocate_buffers,
-    do_inference, 
-    do_inference_v2,
-    cuda,
-)
+try:
+    import torch2trt as t2t
+    import tensorrt as trt
+except ImportError as e:
+    raise ImportError(e, f"torch2trt required: `pip install --install-option='--plugins' git+https://github.com/NVIDIA-AI-IOT/torch2trt.git@b0cc8e77a0fbd61e96b971a66bbc11326f77c6b5`")
 
-TRT_LOGGER = trt.Logger()
+EXPLICIT_BATCH = 1 << (int)(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH)
 
-def allocate_buffers(engine, batch_size=1):
-    inputs = []
-    outputs = []
-    bindings = []
-    stream = cuda.Stream()
-    for i, binding in enumerate(engine):
-        shape, dtype = engine.get_binding_shape(binding), engine.get_binding_dtype(binding)
-        size = trt.volume(shape[1:]) * batch_size
-        dtype = trt.nptype(dtype)
-        logging.info(f"binding[{i}][{binding}] shape={shape}, dtype={dtype}, size={size}")
-        
-        # Allocate host and device buffers
-        host_mem = cuda.pagelocked_empty(size, dtype)
-        device_mem = cuda.mem_alloc(host_mem.nbytes)
-        # Append the device buffer to device bindings.
-        bindings.append(int(device_mem))
-        # Append to the appropriate list.
-        if engine.binding_is_input(binding):
-            inputs.append(HostDeviceMem(host_mem, device_mem))
+class TRTPredictor(t2t.TRTModule):
+    def __init__(self, engine=None, input_names=None, output_names=None):
+        super(TRTPredictor, self).__init__(engine, input_names, output_names)
+
+    def predict(self, *inputs, out=None, sync=False):
+        with th.no_grad():
+            output = self(*inputs, out=out)
+            if sync:
+                th.cuda.synchronize()
+            return output
+
+    def forward(self, *inputs, out=None):
+        batch_size = inputs[0].shape[0]
+        bindings = [None] * (len(self.input_names) + len(self.output_names))
+
+        # create output tensors
+        outputs = [None] * len(self.output_names)
+        if out is None:
+            for i, output_name in enumerate(self.output_names):
+                idx = self.engine.get_binding_index(output_name)
+                dtype = t2t.torch_dtype_from_trt(self.engine.get_binding_dtype(idx))
+                shape = tuple(self.engine.get_binding_shape(idx))
+                if shape[0] < 1:
+                    shape = (batch_size, *shape[1:])
+                else:
+                    shape = (batch_size,) + tuple(self.engine.get_binding_shape(idx))
+                device = t2t.torch_device_from_trt(self.engine.get_location(idx))
+                output = th.empty(size=shape, dtype=dtype, device=device)
+                outputs[i] = output
+                bindings[idx] = output.data_ptr()
         else:
-            outputs.append(HostDeviceMem(host_mem, device_mem))
-    return inputs, outputs, bindings, stream
+            for i, output_name in enumerate(self.output_names):
+                idx = self.engine.get_binding_index(output_name)
+                outputs[i] = out[i]
+                bindings[idx] = out[i].data_ptr()
 
-class TensorRTPredictor(object):
-    def __init__(self, engine):
-        from ml.deploy import trt
-        for var in ['has_implicit_batch_dimension', 'max_batch_size', 'max_workspace_size', 'num_layers', 'num_bindings', 'num_optimization_profiles', 'device_memory_size', 'refittable']:
-            logging.info(f"engine.{var}={getattr(engine, var)}")
-        self.input_shapes = []
-        self.output_shapes = []
-        pid = 0
-        batch_size = 1
-        for i, binding in enumerate(engine):
-            if engine.binding_is_input(binding):
-                self.input_shapes.append((1, *engine.get_binding_shape(binding)[1:]))
-                minimum, optimum, maximum = engine.get_profile_shape(pid, binding)
-                logging.info(f"binding[{i}][{binding}] input shape={engine.get_binding_shape(binding)}, min={minimum}, opt={optimum}, max={maximum}")
-                assert self.input_shapes[-1] == minimum
-                pid += 1
-                batch_size = minimum[0]
-                # logging.info(f"max input binding shape={self.input_shapes[-1]}")
+        for i, input_name in enumerate(self.input_names):
+            # XXX Conclude dynamic input shape (only batch dim so far)
+            idx = self.engine.get_binding_index(input_name)
+            binding_shape = tuple(self.context.get_binding_shape(idx))
+            arg_shape = tuple(inputs[i].shape)
+            if binding_shape != arg_shape:
+                logging.info(f"Reset {input_name}.shape{binding_shape} -> {arg_shape}")
+                self.context.set_binding_shape(idx, trt.Dims(arg_shape))
+            bindings[idx] = inputs[i].contiguous().data_ptr()
+
+        self.context.execute_async_v2(
+            bindings=bindings, 
+            stream_handle=th.cuda.current_stream().cuda_stream
+        )
+
+        outputs = tuple(outputs)
+        if len(outputs) == 1:
+            outputs = outputs[0]
+        return outputs
+
+def torch2trt(module, 
+              inputs, 
+              input_names=None, 
+              output_names=None, 
+              max_batch_size=1,
+              max_workspace_size=1<<25, 
+              fp16_mode=False, 
+              strict_type_constraints=False, 
+              int8_mode=False, 
+              int8_calib_dataset=None,
+              int8_calib_algorithm=t2t.DEFAULT_CALIBRATION_ALGORITHM,
+              int8_calib_batch_size=1,
+              keep_network=True, 
+              log_level=trt.Logger.ERROR, 
+              use_onnx=True,
+              **kwargs):
+    """Revise to support dynamic batch size through ONNX by default
+    Args:
+        inputs(List[Tensor]): list of tensors
+    Kwargs:
+    """
+
+    # copy inputs to avoid modifications to source data
+    inputs_in = inputs
+    inputs = [tensor.clone()[0:1] for tensor in inputs]  # only run single entry
+
+    logger = trt.Logger(log_level)
+    builder = trt.Builder(logger)
+    if isinstance(inputs, list):
+        inputs = tuple(inputs)
+    if not isinstance(inputs, tuple):
+        inputs = (inputs,)
+
+    # run once to get num outputs
+    outputs = module(*inputs)
+    if not isinstance(outputs, tuple) and not isinstance(outputs, list):
+        outputs = (outputs,)
+
+    def reduce(value, outputs):
+        nonlocal count
+        if th.is_tensor(outputs):
+            value += 1
+        else:
+            for output in outputs:
+                value = reduce(value, output)
+        return value
+    if input_names is None:
+        # list of tensors expected
+        input_names = t2t.default_input_names(len(inputs))
+    if output_names is None:
+        # in case of nested tensors
+        count = reduce(0, outputs)
+        output_names = t2t.default_output_names(count)
+        # logging.info(f"len(outputs)={len(outputs)}, count={count}")
+    logging.info(f"input_names={input_names}")
+    logging.info(f"output_names={output_names}")
+
+    dynamic_axes = {input_name: {0: 'batch_size'} for input_name in input_names} if max_batch_size > 1 else None
+    if use_onnx:
+        f = io.BytesIO()
+        th.onnx.export(module, inputs, f,
+                       input_names=input_names,
+                       output_names=output_names,
+                       dynamic_axes=dynamic_axes,
+                       opset_version=kwargs.pop('opset_version', 11))
+        f.seek(0)
+        onnx_bytes = f.read()
+        network = builder.create_network(1 << int(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH))
+        parser = trt.OnnxParser(network, logger)
+        parser.parse(onnx_bytes)
+    else:
+        # FIXME No dynamic batch size by default
+        network = builder.create_network()
+        with t2t.ConversionContext(network) as ctx:
+            ctx.add_inputs(inputs, input_names)
+            outputs = module(*inputs)
+            if not isinstance(outputs, tuple) and not isinstance(outputs, list):
+                outputs = (outputs,)
+            ctx.mark_outputs(outputs, output_names)
+
+    builder.max_workspace_size = max_workspace_size
+    builder.max_batch_size = max_batch_size
+    builder.fp16_mode = fp16_mode
+    builder.strict_type_constraints = strict_type_constraints
+    if int8_mode:
+        # default to use input tensors for calibration
+        if int8_calib_dataset is None:
+            int8_calib_dataset = t2t.TensorBatchDataset(inputs_in)
+        builder.int8_mode = True
+        # @TODO(jwelsh):  Should we set batch_size=max_batch_size?  Need to investigate memory consumption
+        builder.int8_calibrator = t2t.DatasetCalibrator(
+            inputs, int8_calib_dataset, batch_size=int8_calib_batch_size, algorithm=int8_calib_algorithm
+        )
+
+    if dynamic_axes is None:
+        engine = builder.build_cuda_engine(network)
+    else:
+        cfg = builder.create_builder_config()
+        if fp16_mode:
+            cfg.flags |= 1 << int(trt.BuilderFlag.FP16)
+            if strict_type_constraints:
+                cfg.flags |= 1 << int(trt.BuilderFlag.STRICT_TYPES)
+        # TODO int8_mode
+        for i in range(network.num_inputs):
+            shape = network.get_input(i).shape
+            if shape[0] < 1:
+                logging.info(f"Dynamic network.get_input({i}).shape={shape}")
+                profile = builder.create_optimization_profile()
+                min = (1, *shape[1:])
+                max = opt = (max_batch_size, *shape[1:])
+                profile.set_shape(input_names[i], min=trt.Dims(min), opt=trt.Dims(opt), max=trt.Dims(max))
+                cfg.add_optimization_profile(profile)
+                logging.info(f"Set dynamic {input_names[i]}.shape to min={min}, opt={opt}, max={max}")
             else:
-                self.output_shapes.append((1, *engine.get_binding_shape(binding)[1:]))
-                logging.info(f"binding[{i}][{binding}] output shape={self.output_shapes[-1]}")
-        
-        self.engine = engine
-        self.ctx = engine.create_execution_context()
-        self.inputs, self.outputs, self.bindings, self.stream = allocate_buffers(engine, batch_size=batch_size)
-        for i, (input, shape) in enumerate(zip(self.inputs, self.input_shapes)):
-            logging.info(f"inputs[{i}] host={input.host.shape[0]}{(batch_size, *shape[1:])}, device={input.device}")
-        for i, (output, shape) in enumerate(zip(self.outputs, self.output_shapes)):
-            logging.info(f"outputs[{i}] host={output.host.shape[0]}{(batch_size, *shape[1:])}, device={output.device}")
-
-    def input(self, i):
-        return self.inputs[i].host.reshape(self.input_shapes[i])
-
-    def predict(self, *args, **kwargs):
-        from ml.deploy import trt
-        batch_size = args[0].shape[0]
-        if batch_size != self.input_shapes[0][0]:
-            logging.info(f"Reallocate buffers for batch size change from {self.input_shapes[0][0]} to {batch_size}")
-            self.inputs, self.outputs, self.bindings, self.stream = allocate_buffers(self.engine, batch_size=batch_size)
-        for arg, input in zip(args, self.inputs):
-            if arg is not input:
-                arg = arg.detach().view(-1).cpu().numpy() if arg.requires_grad else arg.view(-1).cpu().numpy()
-                np.copyto(input.host[:arg.size], arg)
-        
-        # Conclude dynamic input shapes (only batch dim)
-        idx = 0
-        for binding in self.engine:
-            if self.engine.binding_is_input(binding):
-                bix = self.engine.get_binding_index(binding)
-                binding_shape = tuple(self.ctx.get_binding_shape(bix))
-                arg_shape = tuple(args[idx].shape)
-                if binding_shape != arg_shape:
-                    logging.info(f"binding[{binding}][arg{idx}] shape{binding_shape} -> {arg_shape}")
-                    self.ctx.set_binding_shape(bix, Dims(args[idx].shape))
-                    self.input_shapes[idx] = args[idx].shape
-                idx += 1
-        
-        # outputs = trt.do_inference(self.ctx, bindings=self.bindings, inputs=self.inputs, outputs=self.outputs, stream=self.stream, batch_size=batch_size)
-        outputs = trt.do_inference_v2(self.ctx, bindings=self.bindings, inputs=self.inputs, outputs=self.outputs, stream=self.stream)
-        return [output.reshape(-1, *shape[1:])[:batch_size] for output, shape in zip(outputs, self.output_shapes)]
+                logging.info(f"network.get_input({i}).shape={shape}")
+        for i in range(network.num_outputs):
+            shape = network.get_output(i).shape
+            logging.info(f"network.get_output({i}).shape={shape}")
+        engine = builder.build_engine(network, cfg)
+    module_trt = TRTPredictor(engine, input_names, output_names)
+    if keep_network:
+        module_trt.network = network
+    return module_trt
 
 def build(path, batch_size=1, workspace_size=GiB(1), amp=False, strict=False):
     """Build an inference engine from a serialized model.
     Args:
-        path: path to a saved onnx or serialized trt model
+        path: model or path to a saved onnx/trt checkpoint
+        batch_size: max batch size
+        amp: whether to enable fp16
+        strict: enforce lower precision kernel without compromise
     """
-    path = str(path)
-    if path.endswith('onnx'):
-        with trt.Builder(TRT_LOGGER) as builder, builder.create_network(EXPLICIT_BATCH) as network, trt.OnnxParser(network, TRT_LOGGER) as parser:
-            builder.max_workspace_size = workspace_size
-            builder.max_batch_size = batch_size
-            if amp:
-                builder.fp16_mode = amp
-                builder.strict_type_constraints = strict
-            logging.info(f"builder.max_batch_size={builder.max_batch_size}")
-            logging.info(f"builder.max_workspace_size={builder.max_workspace_size}")
-            logging.info(f"builder.platform_has_fast_int8={builder.platform_has_fast_int8}")
-            logging.info(f"builder.platform_has_fast_fp16={builder.platform_has_fast_fp16}")
-            logging.info(f"builder.fp16_mode={builder.fp16_mode}")
-            logging.info(f"builder.strict_type_constraints={builder.strict_type_constraints}")
-            logging.info(f'Loading ONNX file from path {path}...')
-            with open(path, 'rb') as onnx:
-                logging.info(f"Parsing ONNX model at {path}...")
-                if not parser.parse(onnx.read()):
-                    raise ValueError(f'Failed to parse ONNX at {path}')
-
-            logging.info(f"Building the TensorRT engine from {path}")
-            if not network.has_implicit_batch_dimension:
-                cfg = builder.create_builder_config()
-                if amp:
-                    cfg.flags |= 1 << int(trt.BuilderFlag.FP16)
-                    # cfg.flags |= 1 << int(trt.BuilderFlag.INT8)
-                    if strict:
-                        cfg.flags |= 1 << int(trt.BuilderFlag.STRICT_TYPES)
-                for i in range(network.num_inputs):
-                    input = network.get_input(i)
-                    logging.info(f"network.get_input({i}).shape={input.shape}")
-                    if input.shape[0] < 1:
-                        profile = builder.create_optimization_profile()
-                        min = (1, *input.shape[1:])
-                        opt = (batch_size, *input.shape[1:])
-                        max = (batch_size, *input.shape[1:])
-                        profile.set_shape(f"input{i}", min=trt.Dims(min), opt=trt.Dims(opt), max=trt.Dims(max))
-                        cfg.add_optimization_profile(profile)
-                        logging.info(f"Set dynamic input{i} shape to min={min}, opt={opt}, max={max}")
-                        # input.shape = [batch_size, *input.shape[1:]]
-                        # logging.info(f"Reset dynamic input.shape to {tuple(input.shape)} for dynamic batch dim")
-                for i in range(network.num_outputs):
-                    output = network.get_output(i)
-                    logging.info(f"network.get_output({i}).shape={output.shape}")
-
-            flags = [flag for flag in [trt.BuilderFlag.FP16, trt.BuilderFlag.INT8, trt.BuilderFlag.STRICT_TYPES] if 1 << int(flag) & cfg.flags]
-            logging.info(f"Builder config.flags={flags}({cfg.flags:b})")
-            logging.info(f"Builder config.profile_stream={cfg.profile_stream}")
-            logging.info(f"Builder config.num_optimization_profiles={cfg.num_optimization_profiles}")
-            logging.info(f"Builder config.max_workspace_size={cfg.max_workspace_size}")
-            if cfg.num_optimization_profiles > 0:
-                engine = builder.build_engine(network, cfg)
-            else:
-                engine = builder.build_cuda_engine(network, cfg)
-            logging.info("Built the TensorRT inference engine")
-            with open(path.replace('onnx', 'trt'), "wb") as f:
-                f.write(engine.serialize())
-            return engine
-
-    logging.info("Reading the TensorRT engine from {}".format(path))
-    with open(path, "rb") as f, trt.Runtime(TRT_LOGGER) as runtime:
+    logging.info("Deserializing the TensorRT engine from {}".format(path))
+    with open(path, "rb") as f, trt.Logger() as logger, trt.Runtime(logger) as runtime:
         return runtime.deserialize_cuda_engine(f.read())
