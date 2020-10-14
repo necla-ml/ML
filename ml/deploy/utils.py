@@ -5,6 +5,31 @@ from pathlib import Path
 import torch as th
 from ml import io, logging
 
+
+def get_input_output_names(engine):
+    from six import string_types
+    input_names = []
+    output_names = []
+    for idx_or_name in range(engine.num_bindings):
+        # name or index
+        if isinstance(idx_or_name, string_types):
+            name = idx_or_name
+            index  = engine.get_binding_index(self.name)
+            if index == -1:
+                raise IndexError("Binding name not found: %s" % self.name)
+        else:
+            index = idx_or_name
+            name  = engine.get_binding_name(index)
+            if name is None:
+                raise IndexError("Binding index out of range: %i" % self.index)
+
+        if engine.binding_is_input(index):
+            input_names.append(name)
+        else:
+            output_names.append(name)
+
+    return input_names, output_names
+
 def GiB(val):
     return val * 1 << 30
 
@@ -68,9 +93,12 @@ def build(name, model, spec, model_dir=None, backend='trt', reload=False, **kwar
         trt = Path(f"{model_dir}/{name}.trt")
         input_names = kwargs.pop('input_names', None)
         output_names = kwargs.pop('output_names', None)
+        
         if trt.exists() and not reload:
             logging.info(f"Building TensorRT inference engine from {trt}")
             engine = backend.build(trt)
+            if not (input_names and output_names):
+                input_names, output_names = get_input_output_names(engine)
             predictor = backend.TRTPredictor(engine=engine, 
                                              input_names=input_names,
                                              output_names=output_names)
