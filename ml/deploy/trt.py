@@ -26,17 +26,24 @@ class TRTPredictor(t2t.TRTModule):
         batch_size = inputs[0].shape[0]
         bindings = [None] * (len(self.input_names) + len(self.output_names))
 
+        for i, input_name in enumerate(self.input_names):
+            # XXX Conclude dynamic input shape (only batch dim so far)
+            idx = self.engine.get_binding_index(input_name)
+            binding_shape = tuple(self.context.get_binding_shape(idx))
+            arg_shape = tuple(inputs[i].shape)
+            if binding_shape != arg_shape:
+                # logging.info(f"Reallocate {input_name}.shape{binding_shape} -> {arg_shape}")
+                self.context.set_binding_shape(idx, trt.Dims(arg_shape))
+            bindings[idx] = inputs[i].contiguous().data_ptr()
+
         # create output tensors
         outputs = [None] * len(self.output_names)
         if out is None:
             for i, output_name in enumerate(self.output_names):
                 idx = self.engine.get_binding_index(output_name)
                 dtype = t2t.torch_dtype_from_trt(self.engine.get_binding_dtype(idx))
-                shape = tuple(self.engine.get_binding_shape(idx))
-                if shape[0] < 1:
-                    shape = (batch_size, *shape[1:])
-                else:
-                    shape = (batch_size,) + tuple(self.engine.get_binding_shape(idx))
+                shape = tuple(self.context.get_binding_shape(idx))
+                # assert shape[0] == batch_size
                 device = t2t.torch_device_from_trt(self.engine.get_location(idx))
                 output = th.empty(size=shape, dtype=dtype, device=device)
                 outputs[i] = output
@@ -46,16 +53,6 @@ class TRTPredictor(t2t.TRTModule):
                 idx = self.engine.get_binding_index(output_name)
                 outputs[i] = out[i]
                 bindings[idx] = out[i].data_ptr()
-
-        for i, input_name in enumerate(self.input_names):
-            # XXX Conclude dynamic input shape (only batch dim so far)
-            idx = self.engine.get_binding_index(input_name)
-            binding_shape = tuple(self.context.get_binding_shape(idx))
-            arg_shape = tuple(inputs[i].shape)
-            if binding_shape != arg_shape:
-                logging.info(f"Reset {input_name}.shape{binding_shape} -> {arg_shape}")
-                self.context.set_binding_shape(idx, trt.Dims(arg_shape))
-            bindings[idx] = inputs[i].contiguous().data_ptr()
 
         self.context.execute_async_v2(
             bindings=bindings, 
@@ -162,6 +159,10 @@ def torch2trt(module,
         )
 
     if dynamic_axes is None:
+        for i in range(network.num_inputs):
+            logging.info(f"network.get_input({i}).shape={network.get_input(i).shape}")
+        for i in range(network.num_outputs):
+            logging.info(f"network.get_output({i}).shape={network.get_output(i).shape}")
         engine = builder.build_cuda_engine(network)
     else:
         cfg = builder.create_builder_config()
