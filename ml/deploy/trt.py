@@ -32,7 +32,7 @@ class TRTPredictor(t2t.TRTModule):
             binding_shape = tuple(self.context.get_binding_shape(idx))
             arg_shape = tuple(inputs[i].shape)
             if binding_shape != arg_shape:
-                # logging.info(f"Reallocate {input_name}.shape{binding_shape} -> {arg_shape}")
+                logging.info(f"Reallocate {input_name}.shape{binding_shape} -> {arg_shape}")
                 self.context.set_binding_shape(idx, trt.Dims(arg_shape))
             bindings[idx] = inputs[i].contiguous().data_ptr()
 
@@ -43,7 +43,7 @@ class TRTPredictor(t2t.TRTModule):
                 idx = self.engine.get_binding_index(output_name)
                 dtype = t2t.torch_dtype_from_trt(self.engine.get_binding_dtype(idx))
                 shape = tuple(self.context.get_binding_shape(idx))
-                # assert shape[0] == batch_size
+                assert shape[0] == batch_size
                 device = t2t.torch_device_from_trt(self.engine.get_location(idx))
                 output = th.empty(size=shape, dtype=dtype, device=device)
                 outputs[i] = output
@@ -121,7 +121,9 @@ def torch2trt(module,
     logging.info(f"input_names={input_names}")
     logging.info(f"output_names={output_names}")
 
-    dynamic_axes = {input_name: {0: 'batch_size'} for input_name in input_names} if max_batch_size > 1 else None
+    dynamic_axes = kwargs.pop('dynamic_axes', None)
+    if dynamic_axes is None and max_batch_size > 1:
+        dynamic_axes = {input_name: {0: 'batch_size'} for input_name in input_names}
     if use_onnx:
         f = io.BytesIO()
         th.onnx.export(module, inputs, f,
@@ -170,18 +172,26 @@ def torch2trt(module,
             cfg.flags |= 1 << int(trt.BuilderFlag.FP16)
             if strict_type_constraints:
                 cfg.flags |= 1 << int(trt.BuilderFlag.STRICT_TYPES)
+
+        # XXX: set max_workspace in config for dynamic input
+        cfg.max_workspace_size = max_workspace_size
         # TODO int8_mode
+        min_shapes = kwargs.pop('min_shapes', None)
+        max_shapes = kwargs.pop('max_shapes', None)
+        opt_shapes = kwargs.pop('opt_shapes', None)
         for i in range(network.num_inputs):
             shape = network.get_input(i).shape
-            if shape[0] < 1:
+            dynamic = any([s < 1 for s in shape])
+            if dynamic:
                 logging.info(f"Dynamic network.get_input({i}).shape={shape}")
                 profile = builder.create_optimization_profile()
-                min = (1, *shape[1:])
-                max = opt = (max_batch_size, *shape[1:])
+                min = min_shapes and (1, *min_shapes[i]) or (1, *shape[1:])
+                max = max_shapes and (max_batch_size, *max_shapes[i]) or (max_batch_size, *shape[1:])
+                opt = opt_shapes and opt_shapes[i] or max
                 profile.set_shape(input_names[i], min=trt.Dims(min), opt=trt.Dims(opt), max=trt.Dims(max))
                 cfg.add_optimization_profile(profile)
                 logging.info(f"Set dynamic {input_names[i]}.shape to min={min}, opt={opt}, max={max}")
-            else:
+            else: 
                 logging.info(f"network.get_input({i}).shape={shape}")
         for i in range(network.num_outputs):
             shape = network.get_output(i).shape
