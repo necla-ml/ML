@@ -187,7 +187,7 @@ def torch2trt(module,
                 profile = builder.create_optimization_profile()
                 min = min_shapes and (1, *min_shapes[i]) or (1, *shape[1:])
                 max = max_shapes and (max_batch_size, *max_shapes[i]) or (max_batch_size, *shape[1:])
-                opt = opt_shapes and opt_shapes[i] or max
+                opt = opt_shapes and (max_batch_size, *opt_shapes[i]) or max
                 profile.set_shape(input_names[i], min=trt.Dims(min), opt=trt.Dims(opt), max=trt.Dims(max))
                 cfg.add_optimization_profile(profile)
                 logging.info(f"Set dynamic {input_names[i]}.shape to min={min}, opt={opt}, max={max}")
