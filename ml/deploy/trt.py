@@ -27,12 +27,12 @@ class TRTPredictor(t2t.TRTModule):
         bindings = [None] * (len(self.input_names) + len(self.output_names))
 
         for i, input_name in enumerate(self.input_names):
-            # XXX Conclude dynamic input shape (only batch dim so far)
+            # XXX Conclude dynamic input shape
             idx = self.engine.get_binding_index(input_name)
             binding_shape = tuple(self.context.get_binding_shape(idx))
             arg_shape = tuple(inputs[i].shape)
             if binding_shape != arg_shape:
-                logging.info(f"Reallocate {input_name}.shape{binding_shape} -> {arg_shape}")
+                #logging.info(f"Reallocate {input_name}.shape{binding_shape} -> {arg_shape}")
                 self.context.set_binding_shape(idx, trt.Dims(arg_shape))
             bindings[idx] = inputs[i].contiguous().data_ptr()
 
@@ -43,7 +43,7 @@ class TRTPredictor(t2t.TRTModule):
                 idx = self.engine.get_binding_index(output_name)
                 dtype = t2t.torch_dtype_from_trt(self.engine.get_binding_dtype(idx))
                 shape = tuple(self.context.get_binding_shape(idx))
-                assert shape[0] == batch_size
+                #assert shape[0] == batch_size
                 device = t2t.torch_device_from_trt(self.engine.get_location(idx))
                 output = th.empty(size=shape, dtype=dtype, device=device)
                 outputs[i] = output
