@@ -107,7 +107,11 @@ def build(name, model, spec, model_dir=None, backend='trt', reload=False, **kwar
             workspace_size = kwargs.pop('workspace_size', GiB(1))
             amp = kwargs.pop('amp', False)
             device = next(model.parameters()).device
-            inputs = tuple([th.rand(1, *shape, device=device) for shape in spec])
+            min_shapes = kwargs.get('min_shapes')
+            if min_shapes is not None:
+                inputs = tuple([th.rand(1, *shape, device=device) for shape in min_shapes])
+            else:
+                inputs = tuple([th.rand(1, *shape, device=device) for shape in spec])
             predictor = backend.torch2trt(model,
                                           inputs,
                                           max_batch_size=batch_size,
@@ -115,7 +119,8 @@ def build(name, model, spec, model_dir=None, backend='trt', reload=False, **kwar
                                           input_names=input_names,
                                           output_names=output_names,
                                           fp16_mode=amp,
-                                          use_onnx=True)
+                                          use_onnx=True,
+                                          **kwargs)
         logging.info(f"Saving TensorRT checkpoint to {chkpt_path}")
         io.save(predictor.state_dict(), chkpt_path)
         logging.info(f"Built TensorRT inference engine for {time() - t:.3f}s")
