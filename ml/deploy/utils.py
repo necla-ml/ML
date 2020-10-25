@@ -106,6 +106,7 @@ def build(name, model, spec, model_dir=None, backend='trt', reload=False, **kwar
             batch_size = kwargs.pop('batch_size', 1)
             workspace_size = kwargs.pop('workspace_size', GiB(1))
             amp = kwargs.pop('amp', False)
+            int8 = kwargs.pop('int8', False)
             device = next(model.parameters()).device
             min_shapes = kwargs.get('min_shapes')
             if min_shapes is not None:
@@ -119,6 +120,7 @@ def build(name, model, spec, model_dir=None, backend='trt', reload=False, **kwar
                                           input_names=input_names,
                                           output_names=output_names,
                                           fp16_mode=amp,
+                                          int8_mode=int8,
                                           use_onnx=True,
                                           **kwargs)
         logging.info(f"Saving TensorRT checkpoint to {chkpt_path}")
