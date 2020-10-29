@@ -1,7 +1,7 @@
 import numpy as np
 import torch as th
 from ml import io, logging
-from .utils import GiB
+from .utils import GiB, get_calibration_files
 
 try:
     import torch2trt as t2t
@@ -69,15 +69,15 @@ def torch2trt(module,
               input_names=None, 
               output_names=None, 
               max_batch_size=1,
-              max_workspace_size=1<<25, 
+              max_workspace_size=1<<50, 
               fp16_mode=False, 
               strict_type_constraints=False, 
               int8_mode=False, 
               int8_calib_dataset=None,
               int8_calib_algorithm=t2t.DEFAULT_CALIBRATION_ALGORITHM,
-              int8_calib_batch_size=1,
+              int8_calib_batch_size=16,
               keep_network=True, 
-              log_level=trt.Logger.ERROR, 
+              log_level=trt.Logger.VERBOSE, 
               use_onnx=True,
               **kwargs):
     """Revise to support dynamic batch size through ONNX by default
@@ -150,15 +150,8 @@ def torch2trt(module,
     builder.max_batch_size = max_batch_size
     builder.fp16_mode = fp16_mode
     builder.strict_type_constraints = strict_type_constraints
-    if int8_mode:
-        # default to use input tensors for calibration
-        if int8_calib_dataset is None:
-            int8_calib_dataset = t2t.TensorBatchDataset(inputs_in)
-        builder.int8_mode = True
-        # @TODO(jwelsh):  Should we set batch_size=max_batch_size?  Need to investigate memory consumption
-        builder.int8_calibrator = t2t.DatasetCalibrator(
-            inputs, int8_calib_dataset, batch_size=int8_calib_batch_size, algorithm=int8_calib_algorithm
-        )
+    # if int8_mode:
+    #     builder.int8_mode = True
 
     if dynamic_axes is None:
         for i in range(network.num_inputs):
@@ -173,9 +166,27 @@ def torch2trt(module,
             if strict_type_constraints:
                 cfg.flags |= 1 << int(trt.BuilderFlag.STRICT_TYPES)
 
+        if int8_mode:
+            from .calibrator import Calibrator
+            cfg.set_flag(trt.BuilderFlag.INT8)
+
+            calib_max_data = kwargs.pop('int8_calib_max_data', 512)
+            calib_data_path = kwargs.pop('int8_calib_data_path', None)
+
+            calibration_files = calib_data_path and get_calibration_files(calib_data_path, calib_max_data) or []
+
+            # TODO: test calibrator with dynamic shapes other than batch size dimension
+            cfg.int8_calibrator = Calibrator(
+                batch_size=int8_calib_batch_size,
+                inputs=[tuple(tensor.shape[1:]) for tensor in inputs],
+                cache_file=kwargs.pop('int8_calib_cache_file', None),
+                calibration_files=calibration_files,
+                max_calib_data=calib_max_data,
+                algorithm=int8_calib_algorithm
+            )
+
         # XXX: set max_workspace in config for dynamic input
         cfg.max_workspace_size = max_workspace_size
-        # TODO int8_mode
         min_shapes = kwargs.pop('min_shapes', None)
         max_shapes = kwargs.pop('max_shapes', None)
         opt_shapes = kwargs.pop('opt_shapes', None)
