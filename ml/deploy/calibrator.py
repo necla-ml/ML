@@ -2,11 +2,28 @@ import os
 from uuid import uuid4
 
 import torch
+import numpy as np
+from PIL import Image
 import tensorrt as trt
 
 from ml import logging
 
-logging.Logger(name='Calibrator').setLevel('INFO')
+def preprocess(image, channels=3, height=640, width=640):
+    # Get the image in CHW format
+    resized_image = image.resize((width, height), Image.BILINEAR)
+    img_data = np.asarray(resized_image).astype(np.float32)
+
+    if len(img_data.shape) == 2:
+        # For images without a channel dimension, we stack
+        img_data = np.stack([img_data] * 3)
+        logging.debug("Received grayscale image. Reshaped to {:}".format(img_data.shape))
+    else:
+        img_data = img_data.transpose([2, 0, 1])
+
+    img_data /= 255.0
+
+    return torch.from_numpy(img_data)
+
 # https://docs.nvidia.com/deeplearning/sdk/tensorrt-api/python_api/infer/Int8/EntropyCalibrator2.html
 class Calibrator(trt.IInt8EntropyCalibrator2):
     """INT8 Calibrator
@@ -31,6 +48,7 @@ class Calibrator(trt.IInt8EntropyCalibrator2):
                  inputs=[],
                  cache_file=None,
                  device=0,
+                 calibration_files=[],
                  max_calib_data=512,
                  algorithm=trt.CalibrationAlgoType.ENTROPY_CALIBRATION_2):
         super().__init__()
@@ -45,22 +63,40 @@ class Calibrator(trt.IInt8EntropyCalibrator2):
         self.max_calib_data = max_calib_data
         self.algorithm = algorithm
 
+        self.files = calibration_files
+
         self.buffers = [torch.empty((batch_size, *input_shape), dtype=torch.float32, device=device)
                         for input_shape in inputs]
 
+        # Pad the list so it is a multiple of batch_size
+        if self.files and len(self.files) % self.batch_size != 0:
+            logging.info("Padding # calibration files to be a multiple of batch_size {:}".format(self.batch_size))
+            self.files += calibration_files[(len(calibration_files) % self.batch_size):self.batch_size]
+
         self.batches = self.load_batches()
+        self.preprocess_func = preprocess
 
     def get_algorithm(self):
         return self.algorithm
 
     def load_batches(self):
-        for index in range(0, self.max_calib_data, self.batch_size):
-            for offset in range(self.batch_size):
-                for i, input_shape in enumerate(self.inputs):
-                    rand_batch = torch.rand((self.batch_size, *input_shape), dtype=torch.float32).contiguous()
-                    self.buffers[i].copy_(rand_batch)
-            logging.info(f'Generated random calibration data batch: {index + self.batch_size}/{self.max_calib_data}')
-            yield
+        if self.files:
+            # Populates a persistent buffer with images.
+            for index in range(0, len(self.files), self.batch_size):
+                for offset in range(self.batch_size):
+                    image = Image.open(self.files[index + offset])
+                    for i, input_shape in enumerate(self.inputs):
+                        self.buffers[i][offset] = self.preprocess_func(image, *input_shape).contiguous()
+                logging.info("Calibration images pre-processed: {:}/{:}".format(index+self.batch_size, len(self.files)))
+                yield
+        else:
+            for index in range(0, self.max_calib_data, self.batch_size):
+                for offset in range(self.batch_size):
+                    for i, input_shape in enumerate(self.inputs):
+                        rand_batch = torch.rand((self.batch_size, *input_shape), dtype=torch.float32).contiguous()
+                        self.buffers[i].copy_(rand_batch)
+                logging.info(f'Generated random calibration data batch: {index + self.batch_size}/{self.max_calib_data}')
+                yield
 
     def get_batch_size(self):
         return self.batch_size
