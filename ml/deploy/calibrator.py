@@ -8,6 +8,8 @@ import tensorrt as trt
 
 from ml import logging
 
+logging.Logger(name='Calibrator').setLevel('INFO')
+
 def preprocess(image, channels=3, height=640, width=640):
     # Get the image in CHW format
     resized_image = image.resize((width, height), Image.BILINEAR)
@@ -50,6 +52,7 @@ class Calibrator(trt.IInt8EntropyCalibrator2):
                  device=0,
                  calibration_files=[],
                  max_calib_data=512,
+                 preprocess_func=None,
                  algorithm=trt.CalibrationAlgoType.ENTROPY_CALIBRATION_2):
         super().__init__()
 
@@ -74,7 +77,11 @@ class Calibrator(trt.IInt8EntropyCalibrator2):
             self.files += calibration_files[(len(calibration_files) % self.batch_size):self.batch_size]
 
         self.batches = self.load_batches()
-        self.preprocess_func = preprocess
+
+        if not preprocess_func:
+            logging.warning('Using a general preprocess function that will resize to input shape and normalize between 0 and 1. \
+                            If you need to apply any other transformation, please specify a custom preprocess function')
+        self.preprocess_func = preprocess_func or preprocess
 
     def get_algorithm(self):
         return self.algorithm
