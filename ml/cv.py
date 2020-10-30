@@ -153,7 +153,7 @@ def resize(img, scale=1, width=0, height=0, interpolation=INTER_LINEAR, **kwargs
         else:
             return cv2.resize(img, None, fx=scale, fy=scale, interpolation=interpolation)
 
-def letterbox(img, size=736, color=114, minimal=True, stretch=False, upscaling=True):
+def letterbox(img, size=640, color=114, minimal=True, stretch=False, upscaling=True):
     """Resize and pad to the new shape.
     Args:
         img(BGR): CV2 BGR image

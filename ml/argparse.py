@@ -27,7 +27,7 @@ class ConfigAction(argparse.Action):
                     if part not in cfg or not isinstance(cfg[part], Config):
                         cfg[part] = Config()
                     cfg = cfg[part]
-                
+
                 import yaml
                 v = yaml.safe_load(v)
                 cfg[key] = v

@@ -72,13 +72,13 @@ class Config(dict):
 
     def __contains__(self, key):
         return key in self.__dict__
- 
+
     def __getattr__(self, key):
         return self[key]
-    
+
     def __getitem__(self, key):
         return self.__dict__.get(key) if key in self else None
- 
+
     def __setitem__(self, key, value):
         self.__dict__[key] = value
 
