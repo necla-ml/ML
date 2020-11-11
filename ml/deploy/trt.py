@@ -77,7 +77,7 @@ def torch2trt(module,
               int8_calib_algorithm=t2t.DEFAULT_CALIBRATION_ALGORITHM,
               int8_calib_batch_size=16,
               keep_network=True, 
-              log_level=trt.Logger.VERBOSE, 
+              log_level=trt.Logger.INFO, 
               use_onnx=True,
               **kwargs):
     """Revise to support dynamic batch size through ONNX by default
@@ -215,7 +215,7 @@ def torch2trt(module,
         module_trt.network = network
     return module_trt
 
-def build(path, batch_size=1, workspace_size=GiB(1), amp=False, strict=False):
+def build(path):
     """Build an inference engine from a serialized model.
     Args:
         path: model or path to a saved onnx/trt checkpoint
