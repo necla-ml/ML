@@ -3,11 +3,11 @@ import math
 import random
 from typing import *
 from pathlib import Path
+from colorsys import rgb_to_hsv
 
 import numpy as np
 import torch as th
 
-from PIL import Image
 import cv2
 
 py_min, py_max = min, max
@@ -70,6 +70,46 @@ WHITE    = (255, 255, 255)
 FG       = GREEN
 BG       = BLACK
 COLORS91 = [[random.randint(0, 255) for _ in range(3)] for _ in range(91)]
+
+PALETTE_RGB = [
+(204,73,196),
+(100,205,76),
+(107,60,194),
+(196,221,63),
+(111,115,206),
+(203,171,58),
+(61,38,94),
+(180,211,121),
+(214,69,116),
+(101,211,154),
+(209,69,48),
+(105,190,189),
+(215,128,63),
+(85,119,152),
+(192,166,116),
+(139,62,116),
+(82,117,57),
+(213,137,206),
+(54,60,54),
+(205,215,188),
+(106,39,44),
+(174,178,219),
+(131,89,48),
+(197,134,139)]
+
+from random import shuffle
+shuffle(PALETTE_RGB)
+PALETTE_RGB = [tuple([c/255 for c in C]) for C in PALETTE_RGB]
+PALETTE_HSV = [rgb_to_hsv(*c) for c in PALETTE_RGB]
+
+def rgb(i, integral=False):
+    if integral:
+        return tuple(map(lambda v: int(255 * v), PALETTE_RGB[i % len(PALETTE_RGB)]))
+    else:
+        return PALETTE_RGB[i % len(PALETTE_RGB)]
+
+def hsv(i, s=1, v=1):
+    return PALETTE_HSV[i % len(PALETTE_HSV)]
 
 def pts(pts):
     r"""
@@ -136,6 +176,7 @@ def toTorch(src, device='cpu'):
 def resize(img, scale=1, width=0, height=0, interpolation=INTER_LINEAR, **kwargs):
     '''Resize input image of PIL/accimage or OpenCV BGR and convert torch tensor image if necessary
     '''
+    from PIL import Image
     if isinstance(img, Image.Image):
         # PIL image
         if width > 0 and height > 0:
@@ -430,12 +471,15 @@ def split_boxes(img_coordinates, boxes, boxes_scores=None):
        
 
 def imshow(img, scale=1, title='', **kwargs):
+    r"""Show an image in a window backed by the image processing backend.
+    """
     if type(img) is list and isTorch(img[0]):
         img = torcoch.cat(img, 2)
 
     if isTorch(img):
         img = fromTorch(img)
 
+    from PIL import Image
     img = img if scale == 1 else resize(img, scale)
     if isinstance(img, Image.Image):
         img.show()
@@ -496,25 +540,26 @@ def render(img,
         cv.save(img, path)
     return img
 
-def drawBox(img, xyxy, color=None, label=None, thickness=None):
+def drawBox(img, xyxy, label=None, color=None, thickness=None):
     tl = thickness or round(0.002 * (img.shape[0] + img.shape[1]) / 2) + 1
     color = color or [random.randint(0, 255) for _ in range(3)]
     c1, c2 = (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2]), int(xyxy[3]))
     cv2.rectangle(img, c1, c2, color, thickness=tl, lineType=cv2.LINE_AA)
     if label:
         tf = py_max(tl - 1, 1)
-        t_size = cv2.getTextSize(label, 0, fontScale=tl / 3, thickness=tf)[0]
-        c2 = c1[0] + t_size[0], c1[1] - t_size[1] - 3
+        t_width, t_height = cv2.getTextSize(label, 0, fontScale=tl / 3, thickness=tf)[0]
+        c2 = c1[0] + t_width * 3 // 4, c1[1] - t_height - 3
         cv2.rectangle(img, c1, c2, color, -1, cv2.LINE_AA)
-        cv2.putText(img, label, (c1[0], c1[1] - 2), 0, tl / 4, [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA)
+        cv2.putText(img, label, (c1[0], c1[1] - 2 - tf), 0, tl / 4, [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA)
+    return img
 
-def drawBoxes(img, boxes, colors=None, labels=None, scores=None):
-    from .vision.ops import clip_boxes_to_image
+def drawBoxes(img, boxes, labels=None, scores=None, colors=None):
     for i, box in enumerate(boxes):
         label = None
         if labels:
             label = labels[i] if scores is None else f"{labels[i]} {scores[i]:.2f}"
         drawBox(img, box, color=colors and colors[i] or None, label=label)
+    return img
 
 def drawLine(img, x1, y1, x2, y2):
     line(img, (x1, y1), (x2, y2), FG, 1)
