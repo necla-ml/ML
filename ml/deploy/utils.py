@@ -138,7 +138,7 @@ def build(name, model, spec, model_dir=None, backend='trt', reload=False, **kwar
                                              output_names=output_names)
         else:
             batch_size = kwargs.pop('batch_size', 1)
-            workspace_size = kwargs.pop('workspace_size', GiB(1))
+            workspace_size = kwargs.pop('workspace_size', GiB(4))
             amp = kwargs.pop('amp', False)
             int8 = kwargs.pop('int8', False)
             # consider models with larger inputs before selecting default batch size
