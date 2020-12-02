@@ -13,6 +13,7 @@ START_CODE24 = bytes.fromhex('000001')
 START_CODE32 = bytes.fromhex('00000001')
 
 class NALU_t(IntEnum):
+    UNSPECIFIED = 0
     NIDR = 1 
     IDR = 5
     SEI = 6
