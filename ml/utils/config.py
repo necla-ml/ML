@@ -67,6 +67,9 @@ class Config(dict):
     def __eq__(self, c):
         return type(c) == type(self) and self.__dict__ == c.__dict__ or False
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def __bool__(self):
         return len(self) > 0
 
