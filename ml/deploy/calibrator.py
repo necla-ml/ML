@@ -76,12 +76,12 @@ class Calibrator(trt.IInt8EntropyCalibrator2):
             logging.info("Padding # calibration files to be a multiple of batch_size {:}".format(self.batch_size))
             self.files += calibration_files[(len(calibration_files) % self.batch_size):self.batch_size]
 
-        self.batches = self.load_batches()
-
         if not preprocess_func:
             logging.warning('Using a general preprocess function that will resize to input shape and normalize between 0 and 1. \
                             If you need to apply any other transformation, please specify a custom preprocess function')
         self.preprocess_func = preprocess_func or preprocess
+
+        self.batches = self.load_batches()
 
     def get_algorithm(self):
         return self.algorithm
