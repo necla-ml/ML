@@ -1,25 +1,23 @@
-from numba import njit, jitclass, types, typed
-import numpy as np
-from array import array
+from numba import njit
 
+from torch import ByteTensor
 import torch
 import pytest
 
 # FIXME not supported yet
-#@njit
+@njit
+@pytest.mark.essential
 def method(bitstream, workaround=False):
     start = 0
-    header = (1,2,3)
-    #buf = len(bitstream[0:4])
-    buf = bitstream[4] 
-    # return (start, *header), buf
-    return bitstream
+    header = (1, 2, 3)
+    buf = bitstream[4]
+    return (start, *header), buf
 
 @pytest.mark.essential
 def test_memoryview():
-    a = bytearray(8)
+    a = bytearray(range(8))
     ma = memoryview(a)
-    # output = method(ma, workaround=True)
+    output = method(ma, workaround=True)
     output = method(a, workaround=True)
     print(output)
 
@@ -40,5 +38,5 @@ def sum(arr):
 
 @pytest.mark.essential
 def test_torch_jit():
-    buf = torch.ByteTensor([1,2,3])
+    buf = ByteTensor([1, 2, 3])
     print(sum(buf))
