@@ -6,14 +6,14 @@ import pytest
 
 # FIXME not supported yet
 @njit
-@pytest.mark.essential
+# @pytest.mark.essential
 def method(bitstream, workaround=False):
     start = 0
     header = (1, 2, 3)
     buf = bitstream[4]
     return (start, *header), buf
 
-@pytest.mark.essential
+# @pytest.mark.essential
 def test_memoryview():
     a = bytearray(range(8))
     ma = memoryview(a)
@@ -36,7 +36,7 @@ def sum(arr):
         s += e
     return s
 
-@pytest.mark.essential
+# @pytest.mark.essential
 def test_torch_jit():
     buf = ByteTensor([1, 2, 3])
     print(sum(buf))
