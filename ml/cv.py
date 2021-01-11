@@ -548,9 +548,14 @@ def drawBox(img, xyxy, label=None, color=None, thickness=None):
     if label:
         tf = py_max(tl - 1, 1)
         t_width, t_height = cv2.getTextSize(label, 0, fontScale=tl / 3, thickness=tf)[0]
-        c2 = c1[0] + t_width * 3 // 4, c1[1] - t_height - 3
-        cv2.rectangle(img, c1, c2, color, -1, cv2.LINE_AA)
-        cv2.putText(img, label, (c1[0], c1[1] - 2 - tf), 0, tl / 4, [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA)
+        if c1[1] - 2 - tf < 0:
+            c2 = c1[0] + t_width * 3 // 4, c1[1] + t_height + 3
+            cv2.rectangle(img, c1, c2, color, -1, cv2.LINE_AA)
+            cv2.putText(img, label, (c1[0] + 2, c1[1] + t_height - 2), 0, tl / 4, [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA)
+        else:
+            c2 = c1[0] + t_width * 3 // 4, c1[1] - t_height - 3
+            cv2.rectangle(img, c1, c2, color, -1, cv2.LINE_AA)
+            cv2.putText(img, label, (c1[0], c1[1] - 2 - tf), 0, tl / 4, [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA)
     return img
 
 def drawBoxes(img, boxes, labels=None, scores=None, colors=None):
