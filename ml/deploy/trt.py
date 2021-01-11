@@ -32,7 +32,7 @@ class TRTPredictor(t2t.TRTModule):
             binding_shape = tuple(self.context.get_binding_shape(idx))
             arg_shape = tuple(inputs[i].shape)
             if binding_shape != arg_shape:
-                #logging.info(f"Reallocate {input_name}.shape{binding_shape} -> {arg_shape}")
+                # logging.info(f"Reallocate {input_name}.shape{binding_shape} -> {arg_shape}")
                 self.context.set_binding_shape(idx, trt.Dims(arg_shape))
             bindings[idx] = inputs[i].contiguous().data_ptr()
 
@@ -192,6 +192,7 @@ def torch2trt(module,
         min_shapes = kwargs.pop('min_shapes', None)
         max_shapes = kwargs.pop('max_shapes', None)
         opt_shapes = kwargs.pop('opt_shapes', None)
+        logging.info(f"dynamic_axes={dynamic_axes}")
         for i in range(network.num_inputs):
             shape = network.get_input(i).shape
             dynamic = any([s < 1 for s in shape])
