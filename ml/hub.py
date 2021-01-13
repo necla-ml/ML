@@ -19,7 +19,7 @@ SPECS = dict(
 
 def parse(url):
     spec = urlparse(url)
-    if spec == 's3':
+    if spec.scheme == 's3':
         key = spec.path[1:]
         return dict(
             scheme='s3://',
