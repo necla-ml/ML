@@ -514,7 +514,7 @@ def render(img,
         # Detection only
         if score_thr:
             result = result[result[:, 4] >= score_thr]
-        labels = [classes[c.int()] for c in result[:, 5]] if classes else [f"{int(c)}" for c in result[:, 5]]
+        labels = [classes[c.int()] for c in result[:, 5]] if classes else [f"[{int(c)}]" for c in result[:, 5]]
         colors = [COLORS91[c.int()] for c in result[:, 5]]
         logging.debug(f"Drawing detection: {result} with labels={labels}")
         cv.drawBoxes(img, result[:, :4], labels=labels, scores=result[:, 4], colors=colors)
