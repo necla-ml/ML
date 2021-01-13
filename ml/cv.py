@@ -99,7 +99,7 @@ PALETTE_RGB = [
 
 from random import shuffle
 shuffle(PALETTE_RGB)
-PALETTE_RGB = [tuple([c/255 for c in C]) for C in PALETTE_RGB]
+PALETTE_RGB = [tuple([c / 255 for c in C]) for C in PALETTE_RGB]
 PALETTE_HSV = [rgb_to_hsv(*c) for c in PALETTE_RGB]
 
 def rgb(i, integral=False):
@@ -528,9 +528,10 @@ def render(img,
             labels = [f"{classes[c.int()]}[{tid}]" for tid, c in zip(tids, result[:, 5])]
         else:
             labels = [f"[{int(c)}][{tid}]" for tid, c in zip(tids, result[:, 5])]
-        colors = [COLORS91[c.int()] for c in result[:, 5]]
+        colors = [cv.rgb(tid, integral=True) for tid in tids]
         cv.drawBoxes(img, result[:, :4], labels=labels, scores=result[:, 4], colors=colors)
-        logging.debug(f"Tracking {tuple(labels)}")
+        # logging.info(f"Tracks labels={labels}")
+        # logging.info(f"Colors colors={colors}")
     else:
         logging.warning(f"No RoIs to render")
     path = path and Path(path) or None
