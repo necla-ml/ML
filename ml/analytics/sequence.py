@@ -23,7 +23,8 @@ def srange(*args):
 def encode(labels):
     id2cls = list(labels)
     cls2id = { cls: i for i, cls in enumerate(id2cls) }
-    id2chr = list(srange(0x0080, 0x0080 + len(id2cls)))
+    # NOTE: range less than 100 could cause conflicts with python unicodes for whitespaces
+    id2chr = list(srange(0x0100, 0x0100 + len(id2cls)))
     return dict(id2cls=id2cls, cls2id=cls2id, id2chr=id2chr)
 
 class SequenceRuleEngine(object):
