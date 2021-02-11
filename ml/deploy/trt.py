@@ -169,7 +169,6 @@ def torch2trt(module,
         if int8_mode:
             from .calibrator import Calibrator
             cfg.set_flag(trt.BuilderFlag.INT8)
-
             calib_max_data = kwargs.pop('int8_calib_max_data', 512)
             calib_data_path = kwargs.pop('int8_calib_data_path', None)
             calib_preprocess_func = kwargs.pop('int8_calib_preprocess_func', None)
@@ -210,6 +209,7 @@ def torch2trt(module,
         for i in range(network.num_outputs):
             shape = network.get_output(i).shape
             logging.info(f"network.get_output({i}).shape={shape}")
+        logging.info(f"building TensorRT engine with fp16={fp16_mode}, int8={int8_mode}, strict={strict_type_constraints}")
         engine = builder.build_engine(network, cfg)
     module_trt = TRTPredictor(engine, input_names, output_names)
     if keep_network:

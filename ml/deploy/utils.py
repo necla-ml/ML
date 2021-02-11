@@ -141,6 +141,7 @@ def build(name, model, spec, model_dir=None, backend='trt', reload=False, **kwar
             workspace_size = kwargs.pop('workspace_size', GiB(1))
             amp = kwargs.pop('amp', False)
             int8 = kwargs.pop('int8', False)
+            strict_type_constraints = kwargs.pop('strict_type_constraints', False)
             # consider models with larger inputs before selecting default batch size
             int8_calib_batch_size = kwargs.pop('int8_calib_batch_size', 16)
             device = next(model.parameters()).device
@@ -158,6 +159,7 @@ def build(name, model, spec, model_dir=None, backend='trt', reload=False, **kwar
                                           fp16_mode=amp,
                                           int8_mode=int8,
                                           int8_calib_batch_size=int8_calib_batch_size,
+                                          strict_type_constraints=strict_type_constraints,
                                           use_onnx=True,
                                           **kwargs)
         logging.info(f"Saving TensorRT checkpoint to {chkpt_path}")
