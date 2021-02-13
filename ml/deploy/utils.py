@@ -98,6 +98,29 @@ def export(model, spec, path, **kwargs):
         raise ValueError(f"Unknown suffix `{path.suffix}` to export")
 
 def build(name, model, spec, model_dir=None, backend='trt', reload=False, **kwargs):
+    r"""
+    Args:
+        name(str): checkpoint name to save and load
+        model(nn.Module): pytorch model on CPU
+        spec(Tuple[B, C, H, W]): input shape including dynamic axies as -1
+    Kwargs:
+        model_dir(str, Path): path to save and load model checkpoint
+        backend(str): deployment backend
+        reload(bool): whether to force deploying the model with backend
+
+        input_names(List[str]): list of names of input tensor args
+        output_names([List[str]): list of names of output tensors
+        batch_size(int): max batch size as the dynamic axis 0
+        workspace_size(int):
+        fp16(bool):
+        int8(bool):
+        strict_type_constraints(bool): type mode strictly forced or not
+        int8_calib_batch_size(int):
+        int8_calib_preprocess_func(Callable):
+        min_shapes(Tuple):
+        opt_shapes(Tuple):
+        max_shapes(Tuple)
+    """
     from ml import hub
     if model_dir is None:
         hub_dir = hub.get_dir()
@@ -129,6 +152,7 @@ def build(name, model, spec, model_dir=None, backend='trt', reload=False, **kwar
         output_names = kwargs.pop('output_names', None)
         
         if trt.exists() and not reload:
+            # Load from previous saved deployment engine
             logging.info(f"Building TensorRT inference engine from {trt}")
             engine = backend.build(trt)
             if not (input_names and output_names):
@@ -139,10 +163,10 @@ def build(name, model, spec, model_dir=None, backend='trt', reload=False, **kwar
         else:
             batch_size = kwargs.pop('batch_size', 1)
             workspace_size = kwargs.pop('workspace_size', GiB(1))
-            amp = kwargs.pop('amp', False)
+            fp16 = kwargs.pop('amp', False)
+            fp16 = fp16 or kwargs.pop('fp16', False)
             int8 = kwargs.pop('int8', False)
-            strict_type_constraints = kwargs.pop('strict_type_constraints', False)
-            # consider models with larger inputs before selecting default batch size
+            strict_type_constraints = kwargs.pop('strict_type_constraints', False)  # amp implied
             int8_calib_batch_size = kwargs.pop('int8_calib_batch_size', 16)
             device = next(model.parameters()).device
             min_shapes = kwargs.get('min_shapes')
@@ -156,7 +180,7 @@ def build(name, model, spec, model_dir=None, backend='trt', reload=False, **kwar
                                           max_workspace_size=workspace_size,
                                           input_names=input_names,
                                           output_names=output_names,
-                                          fp16_mode=amp,
+                                          fp16_mode=fp16,
                                           int8_mode=int8,
                                           int8_calib_batch_size=int8_calib_batch_size,
                                           strict_type_constraints=strict_type_constraints,

@@ -69,21 +69,35 @@ def torch2trt(module,
               input_names=None, 
               output_names=None, 
               max_batch_size=1,
-              max_workspace_size=1<<50, 
-              fp16_mode=False, 
+              max_workspace_size=GiB(1), 
               strict_type_constraints=False, 
+              fp16_mode=False, 
               int8_mode=False, 
-              int8_calib_dataset=None,
-              int8_calib_algorithm=t2t.DEFAULT_CALIBRATION_ALGORITHM,
               int8_calib_batch_size=16,
+              int8_calib_algorithm=t2t.DEFAULT_CALIBRATION_ALGORITHM,
               keep_network=True, 
               log_level=trt.Logger.INFO, 
               use_onnx=True,
               **kwargs):
     """Revise to support dynamic batch size through ONNX by default
     Args:
+        module(nn.Module):
         inputs(List[Tensor]): list of tensors
     Kwargs:
+        input_names:
+        output_names:
+        dynamic_axes(Dict[str, Dict[int, str]]): {input_key: {index: name}}
+        min_shapes(Dict[int, Tuple(int, int, int)]): minimum shape for each dynamic input
+        opt_shapes(Dict[int, Tuple(int, int, int)]): optimal shape for each dynamic input
+        max_shapes(Dict[int, Tuple(int, int, int)]): maximum shape for each dynamic input
+
+        max_batch_size(int): max batch size as the dynamic axis 0
+        int8_calib_cache_file(str):
+        int8_calib_data_path(str):
+        int8_calib_max_data(int):
+        int8_calib_batch_size(int): batch size to load for calibration
+        int8_calib_preprocess_func(input):
+        opset_version(int):
     """
 
     # copy inputs to avoid modifications to source data
@@ -149,10 +163,8 @@ def torch2trt(module,
     builder.max_workspace_size = max_workspace_size
     builder.max_batch_size = max_batch_size
     builder.fp16_mode = fp16_mode
+    builder.int8_mode = int8_mode
     builder.strict_type_constraints = strict_type_constraints
-    # if int8_mode:
-    #     builder.int8_mode = True
-
     if dynamic_axes is None:
         for i in range(network.num_inputs):
             logging.info(f"network.get_input({i}).shape={network.get_input(i).shape}")
@@ -169,10 +181,10 @@ def torch2trt(module,
         if int8_mode:
             from .calibrator import Calibrator
             cfg.set_flag(trt.BuilderFlag.INT8)
-            calib_max_data = kwargs.pop('int8_calib_max_data', 512)
-            calib_data_path = kwargs.pop('int8_calib_data_path', None)
-            calib_preprocess_func = kwargs.pop('int8_calib_preprocess_func', None)
-            calib_cache_file = kwargs.pop('int8_calib_cache_file', None)
+            calib_cache_file = kwargs.pop('int8_calib_cache_file', None)            # cache of calibration dataset
+            calib_data_path = kwargs.pop('int8_calib_data_path', None)              # path to calibration data
+            calib_max_data = kwargs.pop('int8_calib_max_data', 512)                 # max amount of calibration data to use
+            calib_preprocess_func = kwargs.pop('int8_calib_preprocess_func', None)  # preprocessing of calibration data
             calib_files = calib_data_path and get_calibration_files(calib_data_path, calib_max_data) or []
 
             # TODO: test calibrator with dynamic shapes other than batch size dimension
@@ -192,24 +204,30 @@ def torch2trt(module,
         max_shapes = kwargs.pop('max_shapes', None)
         opt_shapes = kwargs.pop('opt_shapes', None)
         logging.info(f"dynamic_axes={dynamic_axes}")
+
+        profiles = {}
         for i in range(network.num_inputs):
             shape = network.get_input(i).shape
             dynamic = any([s < 1 for s in shape])
             if dynamic:
-                logging.info(f"Dynamic network.get_input({i}).shape={shape}")
+                logging.info(f"dynamic network.get_input({i}).shape={shape}")
                 profile = builder.create_optimization_profile()
                 min = min_shapes and (1, *min_shapes[i]) or (1, *shape[1:])
                 max = max_shapes and (max_batch_size, *max_shapes[i]) or (max_batch_size, *shape[1:])
                 opt = opt_shapes and (max_batch_size, *opt_shapes[i]) or max
                 profile.set_shape(input_names[i], min=trt.Dims(min), opt=trt.Dims(opt), max=trt.Dims(max))
-                cfg.add_optimization_profile(profile)
-                logging.info(f"Set dynamic {input_names[i]}.shape to min={min}, opt={opt}, max={max}")
+                idx = cfg.add_optimization_profile(profile)
+                profiles[idx] = profile
+                logging.info(f"set dynamic {input_names[i]}.shape to min={min}, opt={opt}, max={max} in profile[{idx}]")
             else: 
                 logging.info(f"network.get_input({i}).shape={shape}")
         for i in range(network.num_outputs):
             shape = network.get_output(i).shape
             logging.info(f"network.get_output({i}).shape={shape}")
         logging.info(f"building TensorRT engine with fp16={fp16_mode}, int8={int8_mode}, strict={strict_type_constraints}")
+        if int8_mode:
+            assert network.num_inputs == 1, "Only one dynamic tensor input is supported for int8 calibration"
+            cfg.set_calibration_profile(profiles[0])
         engine = builder.build_engine(network, cfg)
     module_trt = TRTPredictor(engine, input_names, output_names)
     if keep_network:
@@ -220,9 +238,6 @@ def build(path):
     """Build an inference engine from a serialized model.
     Args:
         path: model or path to a saved onnx/trt checkpoint
-        batch_size: max batch size
-        amp: whether to enable fp16
-        strict: enforce lower precision kernel without compromise
     """
     logging.info("Deserializing the TensorRT engine from {}".format(path))
     with open(path, "rb") as f, trt.Logger() as logger, trt.Runtime(logger) as runtime:
