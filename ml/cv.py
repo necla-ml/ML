@@ -13,6 +13,15 @@ import cv2
 py_min, py_max = min, max
 irange = range
 from cv2 import *
+
+from PIL import Image
+CV2PIL = {
+    cv2.INTER_NEAREST: Image.NEAREST,   # NONE
+    cv2.INTER_LANCZOS4: Image.LANCZOS,  # ANTIALIAS
+    cv2.INTER_LINEAR: Image.BILINEAR,
+    cv2.INTER_CUBIC: Image.BICUBIC,     # CUBIC
+}
+
 from . import sys, logging
 
 try:
@@ -22,7 +31,7 @@ except ImportError as e:
 else:
     tv.set_image_backend('accimage')
 
-## PIL functions
+# PIL functions
 
 PIL_EXIF_TAGS = {}
 
@@ -58,7 +67,7 @@ PIL RGB: uinit8 in HWC ndarray
 torch RGB: float in CHW tensor
 '''
 
-## Essential OpenCV
+# Essential OpenCV
 
 BLACK    = (  0,   0,   0)
 BLUE     = (255,   0,   0)
@@ -173,26 +182,63 @@ def toTorch(src, device='cpu'):
     t = th.from_numpy(src / 255).to(device)
     return t
 
-def resize(img, scale=1, width=0, height=0, interpolation=INTER_LINEAR, **kwargs):
-    '''Resize input image of PIL/accimage or OpenCV BGR and convert torch tensor image if necessary
+def resize(img, size, lossy=False, interpolation=INTER_LINEAR, **kwargs):
+    '''Resize input image of PIL/accimage, OpenCV BGR or torch tensor.
+
+    Args:
+        size(Tuple[int], int): tuple of height and width or length on both sides following torchvision resize semantics
+        lossy(bool): resize by the shorter edge if True or by the longer edge to preserve details
     '''
     from PIL import Image
-    if isinstance(img, Image.Image):
-        # PIL image
-        if width > 0 and height > 0:
-            return img.resize((width, height), Image.ANTIALIAS)
+    if isTorch(img):
+        # RGB tensor in CHW
+        from torchvision.transforms import functional as F
+        interpolation=CV2PIL[interpolation]
+        H, W = img.shape[-2:]
+        if isinstance(size, int):
+            # with aspect ratio preserved
+            if lossy:
+                # by the shorter edge
+                return F.resize(img, size, interpolation=interpolation)
+            else:
+                # by the longer edge
+                if H < W:
+                    h, w = int(H / W * size), size
+                else:
+                    h, w = size, int(W / H * size)
+                return F.resize(img, (h, w), interpolation=interpolation)
         else:
-            size = [int(s * scale) for s in img.size]
-            return img.resize(size, Image.ANTIALIAS)
+            # exact as is
+            return F.resize(img, size, interpolation=interpolation)
     else:
-        if isTorch(img):
-            img = fromTorch(img)
-
-        # OpenCV BGR image
-        if width > 0 and height > 0:
-            return cv2.resize(img, (width, height), interpolation=interpolation)
+        W, H = img.size if isinstance(img, Image.Image) else img.shape[-3:-1][::-1]
+        if isinstance(size, int):
+            # with aspect ratio preserved
+            if lossy:
+                # by the shorter edge
+                if H < W:
+                    h, w = size, int(W / H * size)
+                else:
+                    h, w = int(H / W * size), size
+            else:
+                # by the longer edge
+                if H < W:
+                    h, w = int(H / W * size), size
+                else:
+                    h, w = size, int(W / H * size)
         else:
-            return cv2.resize(img, None, fx=scale, fy=scale, interpolation=interpolation)
+            # exact as is
+            h, w = size
+
+        if isinstance(img, Image.Image):
+            # PIL image
+            interpolation=CV2PIL[interpolation]
+            return img.resize((w, h), resample=interpolation)
+        else:
+            # OpenCV BGR image
+            return cv2.resize(img, (w, h), interpolation=interpolation)
+            # XXX no longer support resize by scale
+            # return cv2.resize(img, None, fx=scale, fy=scale, interpolation=interpolation)
 
 def letterbox(img, size=640, color=114, minimal=True, stretch=False, upscaling=True):
     """Resize and pad to the new shape.

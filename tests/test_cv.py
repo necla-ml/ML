@@ -1,6 +1,6 @@
 from pathlib import Path
 import pytest
-import torch
+import torch as th
 
 from ml import cv
 
@@ -49,6 +49,59 @@ def classes():
 def suffix():
     return 'gt'
 
+@pytest.mark.essential
+def test_resize_tensor():
+    from ml import cv
+    H, W, size = 720, 1280, 256
+    img = th.randn(3, H, W)
+    resized = cv.resize(img, size)
+    h, w = resized.shape[-2:]
+    assert (h, w) == (int(H / W * size), size), f"mismatched after resize: (h, w) == {(h, w)} but {(H / W * size, size)} expected"
+    resized = cv.resize(img, 256, lossy=False)
+    h, w = resized.shape[-2:]
+    assert (h, w) == (int(H / W * size), size), f"mismatched after resize: (h, w) == {(h, w)} but {(H / W * size, size)} expected"
+    resized = cv.resize(img, 256, lossy=True)
+    h, w = resized.shape[-2:]
+    assert (h, w) == (size, int(W / H * size)), f"mismatched after resize: (h, w) == {(h, w)} but {(size, int(W / H * size))} expected"
+
+@pytest.mark.essential
+def test_resize_cv2():
+    from ml import cv
+    H, W, size = 720, 1280, 256
+    img = th.randn(3, H, W)
+    img = cv.fromTorch(img)
+    assert img.shape == (H, W, 3)
+    resized = cv.resize(img, size)
+    h, w = resized.shape[-3:-1]
+    assert (h, w) == (int(H / W * size), size), f"mismatched after resize: (h, w) == {(h, w)} but {(H / W * size, size)} expected"
+    resized = cv.resize(img, 256, lossy=False)
+    h, w = resized.shape[-3:-1]
+    assert (h, w) == (int(H / W * size), size), f"mismatched after resize: (h, w) == {(h, w)} but {(H / W * size, size)} expected"
+    resized = cv.resize(img, 256, lossy=True)
+    h, w = resized.shape[-3:-1]
+    assert (h, w) == (size, int(W / H * size)), f"mismatched after resize: (h, w) == {(h, w)} but {(size, int(W / H * size))} expected"
+
+@pytest.mark.essential
+def test_resize_pil():
+    from ml import cv
+    from PIL import Image
+    H, W, size = 720, 1280, 256
+    img = th.randn(3, H, W)
+    img = cv.fromTorch(img)
+    img = Image.fromarray(img)
+    assert img.size == (W, H)
+    assert img.mode == 'RGB'
+    resized = cv.resize(img, size)
+    w, h = resized.size
+    assert (h, w) == (int(H / W * size), size), f"mismatched after resize: (h, w) == {(h, w)} but {(H / W * size, size)} expected"
+    resized = cv.resize(img, 256, lossy=False)
+    w, h = resized.size
+    assert (h, w) == (int(H / W * size), size), f"mismatched after resize: (h, w) == {(h, w)} but {(H / W * size, size)} expected"
+    resized = cv.resize(img, 256, lossy=True)
+    w, h = resized.size
+    assert (h, w) == (size, int(W / H * size)), f"mismatched after resize: (h, w) == {(h, w)} but {(size, int(W / H * size))} expected"
+
+
 def test_render_yolo(images, labels, suffix, classes=None, output=None):
     if not isinstance(images, list):
         images = [images]
@@ -59,8 +112,8 @@ def test_render_yolo(images, labels, suffix, classes=None, output=None):
 
     for img, label in zip(images, labels):
         with open(label) as f:
-            cxyxy = torch.Tensor([tuple(map(float, line.split())) for line in f.read().splitlines()])
-            xyxysc = torch.cat([cxyxy[:, 1:], torch.ones(len(cxyxy), 1), cxyxy[:,0:1]], dim=1)
+            cxyxy = th.Tensor([tuple(map(float, line.split())) for line in f.read().splitlines()])
+            xyxysc = th.cat([cxyxy[:, 1:], torch.ones(len(cxyxy), 1), cxyxy[:,0:1]], dim=1)
             path = Path(output, f"{Path(img).stem}-{suffix}.jpg")
             img = cv.imread(img)
             h, w = img.shape[:2]
