@@ -282,7 +282,7 @@ def letterbox(img, size=640, color=114, minimal=True, stretch=False, upscaling=T
     dh /= 2
 
     if shape[::-1] != new_unpad:
-        img = resize(img, width=new_unpad[0], height=new_unpad[1])
+        img = resize(img, (new_unpad[::-1]))
 
     # Fractional to integral padding
     top, bottom = int(round(dh - 0.1)), int(round(dh + 0.1))
