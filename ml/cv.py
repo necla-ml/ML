@@ -182,12 +182,12 @@ def toTorch(src, device='cpu'):
     t = th.from_numpy(src / 255).to(device)
     return t
 
-def resize(img, size, lossy=False, interpolation=INTER_LINEAR, **kwargs):
+def resize(img, size, constraint='shorter', interpolation=INTER_LINEAR, **kwargs):
     '''Resize input image of PIL/accimage, OpenCV BGR or torch tensor.
 
     Args:
         size(Tuple[int], int): tuple of height and width or length on both sides following torchvision resize semantics
-        lossy(bool): resize by the shorter edge if True or by the longer edge to preserve details
+        constraint(str): resize by the shorter (ImageNet) or longer edge (YOLO)
     '''
     from PIL import Image
     if isTorch(img):
@@ -197,7 +197,7 @@ def resize(img, size, lossy=False, interpolation=INTER_LINEAR, **kwargs):
         H, W = img.shape[-2:]
         if isinstance(size, int):
             # with aspect ratio preserved
-            if lossy:
+            if constraint == 'shorter':
                 # by the shorter edge
                 return F.resize(img, size, interpolation=interpolation)
             else:
@@ -214,7 +214,7 @@ def resize(img, size, lossy=False, interpolation=INTER_LINEAR, **kwargs):
         W, H = img.size if isinstance(img, Image.Image) else img.shape[-3:-1][::-1]
         if isinstance(size, int):
             # with aspect ratio preserved
-            if lossy:
+            if constraint == 'shorter':
                 # by the shorter edge
                 if H < W:
                     h, w = size, int(W / H * size)
@@ -520,19 +520,21 @@ def imshow(img, scale=1, title='', **kwargs):
     r"""Show an image in a window backed by the image processing backend.
     """
     if type(img) is list and isTorch(img[0]):
-        img = torcoch.cat(img, 2)
-
+        img = th.cat(img, 2)
     if isTorch(img):
         img = fromTorch(img)
 
     from PIL import Image
-    img = img if scale == 1 else resize(img, scale)
     if isinstance(img, Image.Image):
+        w, h = img.size
+        img = img if scale == 1 else resize(img, (h * scale, w * scale))
         img.show()
     else:
+        h, w = img.shape[-3:-1]
+        img = img if scale == 1 else resize(img, (h * scale, w * scale))
         cv2.imshow(str(title), img)
-        waitKey(0)
-        destroyAllWindows()
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
 # OpenCV only
 
@@ -694,7 +696,7 @@ def crop(src, x, y, w, h, width=0, height=0):
     
     src = src[y:y+h, x:x+w]
     if src.shape[0] != height or src.shape[1] != width:
-        src = resize(src, width=width, height=height)
+        src = resize(src, (height, width))
     assert(src.shape[0] == height)
     assert(src.shape[1] == width)
     #show(src, 0.5)

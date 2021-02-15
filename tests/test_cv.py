@@ -56,13 +56,13 @@ def test_resize_tensor():
     img = th.randn(3, H, W)
     resized = cv.resize(img, size)
     h, w = resized.shape[-2:]
-    assert (h, w) == (int(H / W * size), size), f"mismatched after resize: (h, w) == {(h, w)} but {(H / W * size, size)} expected"
-    resized = cv.resize(img, 256, lossy=False)
-    h, w = resized.shape[-2:]
-    assert (h, w) == (int(H / W * size), size), f"mismatched after resize: (h, w) == {(h, w)} but {(H / W * size, size)} expected"
-    resized = cv.resize(img, 256, lossy=True)
+    assert (h, w) == (size, int(W / H * size)), f"mismatched after resize: (h, w) == {(h, w)} but {(size, int(W / H * size))} expected"
+    resized = cv.resize(img, 256, constraint='shorter')
     h, w = resized.shape[-2:]
     assert (h, w) == (size, int(W / H * size)), f"mismatched after resize: (h, w) == {(h, w)} but {(size, int(W / H * size))} expected"
+    resized = cv.resize(img, 256, constraint='longer')
+    h, w = resized.shape[-2:]
+    assert (h, w) == (int(H / W * size), size), f"mismatched after resize: (h, w) == {(h, w)} but {(H / W * size, size)} expected"
 
 @pytest.mark.essential
 def test_resize_cv2():
@@ -73,13 +73,13 @@ def test_resize_cv2():
     assert img.shape == (H, W, 3)
     resized = cv.resize(img, size)
     h, w = resized.shape[-3:-1]
-    assert (h, w) == (int(H / W * size), size), f"mismatched after resize: (h, w) == {(h, w)} but {(H / W * size, size)} expected"
-    resized = cv.resize(img, 256, lossy=False)
-    h, w = resized.shape[-3:-1]
-    assert (h, w) == (int(H / W * size), size), f"mismatched after resize: (h, w) == {(h, w)} but {(H / W * size, size)} expected"
-    resized = cv.resize(img, 256, lossy=True)
+    assert (h, w) == (size, int(W / H * size)), f"mismatched after resize: (h, w) == {(h, w)} but {(size, int(W / H * size))} expected"
+    resized = cv.resize(img, 256, constraint='shorter')
     h, w = resized.shape[-3:-1]
     assert (h, w) == (size, int(W / H * size)), f"mismatched after resize: (h, w) == {(h, w)} but {(size, int(W / H * size))} expected"
+    resized = cv.resize(img, 256, constraint='longer')
+    h, w = resized.shape[-3:-1]
+    assert (h, w) == (int(H / W * size), size), f"mismatched after resize: (h, w) == {(h, w)} but {(H / W * size, size)} expected"
 
 @pytest.mark.essential
 def test_resize_pil():
@@ -93,13 +93,13 @@ def test_resize_pil():
     assert img.mode == 'RGB'
     resized = cv.resize(img, size)
     w, h = resized.size
-    assert (h, w) == (int(H / W * size), size), f"mismatched after resize: (h, w) == {(h, w)} but {(H / W * size, size)} expected"
-    resized = cv.resize(img, 256, lossy=False)
-    w, h = resized.size
-    assert (h, w) == (int(H / W * size), size), f"mismatched after resize: (h, w) == {(h, w)} but {(H / W * size, size)} expected"
-    resized = cv.resize(img, 256, lossy=True)
+    assert (h, w) == (size, int(W / H * size)), f"mismatched after resize: (h, w) == {(h, w)} but {(size, int(W / H * size))} expected"
+    resized = cv.resize(img, 256, constraint='shorter')
     w, h = resized.size
     assert (h, w) == (size, int(W / H * size)), f"mismatched after resize: (h, w) == {(h, w)} but {(size, int(W / H * size))} expected"
+    resized = cv.resize(img, 256, constraint='longer')
+    w, h = resized.size
+    assert (h, w) == (int(H / W * size), size), f"mismatched after resize: (h, w) == {(h, w)} but {(H / W * size, size)} expected"
 
 
 def test_render_yolo(images, labels, suffix, classes=None, output=None):
