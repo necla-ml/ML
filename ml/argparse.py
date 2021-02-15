@@ -63,7 +63,7 @@ class ArgumentParser(argparse.ArgumentParser):
         self.add_argument('--logfile', default=None,                                                            help='Path to log messages if provided')
 
         # CUDA
-        self.add_argument('-s','--seed', default='1204', type=int,                                                help='Random seed')
+        self.add_argument('-s','--seed', default='1204', type=int,                                              help='Random seed')
         self.add_argument('--deterministic', action='store_true',                                               help='Deterministic training results')
         self.add_argument('--gpu', nargs='+', type=int,                                                         help='One or more visible GPU indices as CUDA_VISIBLE_DEVICES w/o comma')
         self.add_argument('--no-gpu', action='store_true',                                                      help='Only use CPU regardless of --gpu')
@@ -86,7 +86,7 @@ class ArgumentParser(argparse.ArgumentParser):
                           # default='GPUMODEL_RTX2080TI', 
                           choices=['GPUMODEL_TITANX', 'GPUMODEL_1080TI', 'GPUMODEL_RTX2080TI'], 
                           help='GPU model constraint w.r.t. memory capacity')
-        self.add_argument('--slurm-mem', default='16G',                                                         help='Max host memory to allocate')
+        self.add_argument('--slurm-mem', default='32G',                                                         help='Max host memory to allocate')
         self.add_argument('--slurm-time', default='0',                                                          help='Time limit')
         self.add_argument('--slurm-export', default='',                                                         help='Time limit')
 
