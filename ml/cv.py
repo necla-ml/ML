@@ -211,7 +211,13 @@ def resize(img, size, constraint='shorter', interpolation=INTER_LINEAR, **kwargs
             # exact as is
             return F.resize(img, size, interpolation=interpolation)
     else:
-        W, H = img.size if isinstance(img, Image.Image) else img.shape[-3:-1][::-1]
+        IMAGE_TYPES = Image.Image
+        try:
+            import accimage
+            IMAGE_TYPES = (Image.Image, accimage.Image)
+        except ImportError:
+            pass
+        W, H = img.size if isinstance(img, IMAGE_TYPES) else img.shape[-3:-1][::-1]
         if isinstance(size, int):
             # with aspect ratio preserved
             if constraint == 'shorter':
@@ -230,10 +236,10 @@ def resize(img, size, constraint='shorter', interpolation=INTER_LINEAR, **kwargs
             # exact as is
             h, w = size
 
-        if isinstance(img, Image.Image):
+        if isinstance(img, IMAGE_TYPES):
             # PIL image
             interpolation=CV2PIL[interpolation]
-            return img.resize((w, h), resample=interpolation)
+            return img.resize((w, h), interpolation)
         else:
             # OpenCV BGR image
             return cv2.resize(img, (w, h), interpolation=interpolation)
