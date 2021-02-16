@@ -55,7 +55,7 @@ class Calibrator(trt.IInt8EntropyCalibrator2):
         Number of images to pass through in one batch during calibration
     input_shape: Tuple[int]
         Tuple of integers defining the shape of input to the model (Default: (3, 224, 224))
-    cache_file: str
+    cache: str
         Name of file to read/write calibration cache from/to.
     device: str or int 
         Device for calibration data (Default: 0 ==> cuda:0)
@@ -65,7 +65,7 @@ class Calibrator(trt.IInt8EntropyCalibrator2):
     def __init__(self,
                  batch_size=32,
                  inputs=[],
-                 cache_file=None,
+                 cache=None,
                  calibration_files=[],
                  max_calib_data=512,
                  preprocess_func=None,
@@ -78,7 +78,7 @@ class Calibrator(trt.IInt8EntropyCalibrator2):
             raise ValueError('Input shapes is required to generate calibration dataset')
 
         # unique cache file name in case mutliple engines are built in parallel
-        self.cache_file = cache_file or f'{uuid4().hex}.cache'
+        self.cache = cache or f'{uuid4().hex}.cache'
         self.batch_size = batch_size
         self.max_calib_data = max_calib_data
         self.algorithm = algorithm
@@ -134,12 +134,12 @@ class Calibrator(trt.IInt8EntropyCalibrator2):
 
     def read_calibration_cache(self):
         # If there is a cache, use it instead of calibrating again. Otherwise, implicitly return None.
-        if os.path.exists(self.cache_file):
-            with open(self.cache_file, "rb") as f:
-                logging.info("Using calibration cache to save time: {:}".format(self.cache_file))
+        if os.path.exists(self.cache):
+            with open(self.cache, "rb") as f:
+                logging.info("Using calibration cache to save time: {:}".format(self.cache))
                 return f.read()
 
     def write_calibration_cache(self, cache):
-        with open(self.cache_file, "wb") as f:
-            logging.info("Caching calibration data for future use: {:}".format(self.cache_file))
+        with open(self.cache, "wb") as f:
+            logging.info("Caching calibration data for future use: {:}".format(self.cache))
             f.write(cache)

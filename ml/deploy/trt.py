@@ -181,19 +181,19 @@ def torch2trt(module,
         if int8_mode:
             from .calibrator import Calibrator
             cfg.set_flag(trt.BuilderFlag.INT8)
-            calib_cache_file = kwargs.pop('int8_calib_cache_file', None)            # cache of calibration dataset
-            calib_data_path = kwargs.pop('int8_calib_data_path', None)              # path to calibration data
-            calib_max_data = kwargs.pop('int8_calib_max_data', 512)                 # max amount of calibration data to use
+            calib_cache = kwargs.pop('int8_calib_cache', None)            # cache of calibration dataset
+            calib_data = kwargs.pop('int8_calib_data', None)              # path to calibration data
+            calib_max = kwargs.pop('int8_calib_max', 512)                 # max amount of calibration data to use
             calib_preprocess_func = kwargs.pop('int8_calib_preprocess_func', None)  # preprocessing of calibration data
-            calib_files = calib_data_path and get_calibration_files(calib_data_path, calib_max_data) or []
+            calib_files = calib_data and get_calibration_files(calib_data, calib_max) or []
 
             # TODO: test calibrator with dynamic shapes other than batch size dimension
             cfg.int8_calibrator = Calibrator(
                 batch_size=int8_calib_batch_size,
                 inputs=[tuple(tensor.shape[1:]) for tensor in inputs],
-                cache_file=calib_cache_file,
+                cache=calib_cache,
                 calibration_files=calib_files,
-                max_calib_data=calib_max_data,
+                max_calib_data=calib_max,
                 preprocess_func=calib_preprocess_func,
                 algorithm=int8_calib_algorithm
             )
