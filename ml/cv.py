@@ -1,4 +1,3 @@
-import os
 import math
 import random
 from typing import *
@@ -7,6 +6,11 @@ from colorsys import rgb_to_hsv
 
 import numpy as np
 import torch as th
+from torchvision.transforms import functional_pil as F_pil
+try:
+    import accimage
+except Exception as e:
+    accimage = None
 
 import cv2
 
@@ -161,12 +165,6 @@ def imread(path, nc=3):
         return loadGrayscale(path) if nc == 1 else loadBGR(path)
     elif isinstance(path, list):
         return [loadGrayscale(p) if nc == 1 else loadBGR(p) for p in path]
-
-from torchvision.transforms import functional_pil as F_pil
-try:
-    import accimage
-except Exception as e:
-    accimage = None
 
 def pil_to_cv(pic, format='BGR'):
     """Convert a ``PIL Image`` to a OpenCV BGR.
