@@ -162,6 +162,45 @@ def imread(path, nc=3):
     elif isinstance(path, list):
         return [loadGrayscale(p) if nc == 1 else loadBGR(p) for p in path]
 
+from torchvision.transforms import functional_pil as F_pil
+try:
+    import accimage
+except Exception as e:
+    accimage = None
+
+def pil_to_cv(pic, format='BGR'):
+    """Convert a ``PIL Image`` to a OpenCV BGR.
+    Args:
+        pic(PIL Image): Image to convert.
+    Returns:
+        image(np.array): Converted image in OpenCV BGR format.
+    """
+    if not F_pil._is_pil_image(pic):
+        raise TypeError('pic should be PIL Image. Got {}'.format(type(pic)))
+
+    if accimage is not None and isinstance(pic, accimage.Image):
+        # accimage format is always uint8 internally
+        # Only RGB to BGR is necessary
+        nppic = np.zeros([pic.height, pic.width, pic.channels], dtype=np.uint8)
+        pic.copyto(nppic)
+        # return nppic[::-1].ascontinuousarray()
+        if format == 'BGR': 
+            return nppic[:, :, ::-1]
+        elif format == 'RGB':
+            return nppic
+        else:
+            raise ValueError(f"Unknown image format '{format}' to convert to ")
+
+    # handle PIL Image HWC
+    img = th.as_tensor(np.asarray(pic))
+    img = img.view(pic.size[1], pic.size[0], len(pic.getbands()))
+    if format == 'BGR': 
+        return img.numpy()[:, :, ::-1]
+    elif format == 'RGB':
+        return img.numpy()
+    else:
+        raise ValueError(f"Unknown image format '{format}' to convert to ")
+
 def fromTorch(src):
     r"""
         Converts a Torch tensor to a CV2 image in BGR format

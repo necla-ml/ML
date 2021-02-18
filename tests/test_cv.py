@@ -50,6 +50,26 @@ def suffix():
     return 'gt'
 
 @pytest.mark.essential
+def test_pil_to_cv():
+    from PIL import Image
+    from ml import cv
+    import numpy as np
+    pic = Image.new('RGB', (320, 240))
+    src = np.zeros((320, 240, 3), dtype=np.uint8)
+    src[:, :, 0] = 0
+    src[:, :, 1] = 1
+    src[:, :, 2] = 2
+    pic = Image.fromarray(src)
+    img = cv.pil_to_cv(pic, format='RGB')
+    assert np.all(img[:, :, 0] == 0)
+    assert np.all(img[:, :, 1] == 1)
+    assert np.all(img[:, :, 2] == 2)
+    img = cv.pil_to_cv(pic, format='BGR')
+    assert np.all(img[:, :, 0] == 2)
+    assert np.all(img[:, :, 1] == 1)
+    assert np.all(img[:, :, 2] == 0)
+
+@pytest.mark.essential
 def test_resize_tensor():
     from ml import cv
     H, W, size = 720, 1280, 256
