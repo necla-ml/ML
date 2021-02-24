@@ -7,6 +7,7 @@ import os
 import sys
 import pprint
 
+import json
 import yaml
 try:
     from yaml import CLoader as YAMLLoader, CDumper as Dumper
@@ -33,6 +34,7 @@ def _include(loader: Loader, node: yaml.Node) -> Any:
     extension = os.path.splitext(filename)[1].lstrip('.')
     with open(filename, 'r') as f:
         if extension in ('yaml', 'yml'):
+            # print(f"!include {filename}")
             return yaml.load(f, Loader)
         elif extension in ('json', ):
             return json.load(f)
