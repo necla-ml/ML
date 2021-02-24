@@ -38,7 +38,7 @@ class ConfigAction(argparse.Action):
                     from importlib import import_module
                     path = Path(import_module(parser.__module__).__file__).parent / "configs" / path.name
                     logging.info(f"Loading by default from {path}")
-                cfg = Config()
+                cfg = Config(__file__=path)
                 cfg.load(path)
                 for k, v in vars(cfg).items():
                     field = args.__dict__.get(k)
