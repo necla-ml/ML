@@ -32,7 +32,7 @@ def _basicConfig(**kwargs):
                 filename = kwargs.pop("filename", None)
                 mode = kwargs.pop("filemode", 'a')
                 if filename:
-                    if 'b'in mode:
+                    if 'b' in mode:
                         errors = None
                     h = FileHandler(filename, mode,
                                     encoding=encoding, errors=errors)
@@ -67,7 +67,7 @@ def basicConfig(**kwargs):
     datefmt = kwargs.pop('datefmt', DATEFMT)
     _basicConfig(level=level, format=format, datefmt=datefmt, **kwargs)
     root.propagate = False
-        
+
 def getLogger(name=None):
     """
     Return a logger with the specified name, creating it if necessary.

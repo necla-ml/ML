@@ -2,7 +2,7 @@ from pathlib import Path
 import argparse
 import re
 
-from .utils.config import Config
+from .utils.config import Config, Loader as IncLoader
 from ml import logging
 
 class ConfigAction(argparse.Action):
@@ -28,9 +28,10 @@ class ConfigAction(argparse.Action):
                         cfg[part] = Config()
                     cfg = cfg[part]
 
+                # in case of !include
                 import yaml
-                v = yaml.safe_load(v)
-                cfg[key] = v
+                v = yaml.load(v, Loader=IncLoader)
+                cfg[key] = Config(v) if isinstance(v, dict) else v
             else:
                 # path to config
                 path = Path(value)
