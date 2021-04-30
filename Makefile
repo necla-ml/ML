@@ -92,12 +92,12 @@ pull: co
 	git pull
 
 merge:
-	git checkout master
+	git checkout main
 	git merge dev
 	git push
 
 tag: require-version
-	git checkout master
+	git checkout main
 	git tag -a v$(version) -m v$(version) 
 	git push origin tags/v$(version)
 

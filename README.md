@@ -53,14 +53,14 @@ To contribute to this project, follow the development flow:
 
 1. Fork this repo in the beginning
 2. Uninstall ML through `conda remove --force ml`
-3. Switch to the `dev` branch for development and testing followed by merge back to `master`
+3. Switch to the `dev` branch for development and testing followed by merge back to `main`
     
     ```
     make pull      # Pull submodules recursively
     make dev-setup # Switch to dev branch and build the package for local installation
     git commit ... # Check in modified files
     git push       # Push to the dev branch on the repo
-    make merge     # Merge back to the master branch and make a pull request afterwards
+    make merge     # Merge back to the main branch and make a pull request afterwards
     ```
 
 ## Conda Distribution
