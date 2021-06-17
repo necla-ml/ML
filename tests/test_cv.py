@@ -49,7 +49,7 @@ def classes():
 def suffix():
     return 'gt'
 
-@pytest.mark.essential
+# @pytest.mark.essential
 def test_pil_to_cv():
     from PIL import Image
     from ml import cv
