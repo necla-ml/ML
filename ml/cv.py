@@ -6,7 +6,6 @@ from colorsys import rgb_to_hsv
 
 import numpy as np
 import torch as th
-from torchvision.transforms import functional_pil as F_pil
 try:
     import accimage
 except Exception as e:
@@ -173,6 +172,7 @@ def pil_to_cv(pic, format='BGR'):
     Returns:
         image(np.array): Converted image in OpenCV BGR format.
     """
+    from torchvision.transforms import functional_pil as F_pil
     if not F_pil._is_pil_image(pic):
         raise TypeError('pic should be PIL Image. Got {}'.format(type(pic)))
 
