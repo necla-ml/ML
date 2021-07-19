@@ -11,11 +11,11 @@ try:
 except Exception as e:
     accimage = None
 
-import cv2
+from ml.av.backend import opencv as cv2
 
 py_min, py_max = min, max
 irange = range
-from cv2 import *
+from ml.av.backend.opencv import *
 
 from PIL import Image
 CV2PIL = {

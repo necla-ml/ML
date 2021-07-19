@@ -2,8 +2,6 @@ from pathlib import Path
 import pytest
 import torch as th
 
-from ml import cv
-
 SKU110K = dict(
     images=[
         '../../datasets/SKU110K/images/train_0.jpg',
@@ -120,7 +118,6 @@ def test_resize_pil():
     resized = cv.resize(img, 256, constraint='longer')
     w, h = resized.size
     assert (h, w) == (int(H / W * size), size), f"mismatched after resize: (h, w) == {(h, w)} but {(H / W * size, size)} expected"
-
 
 def test_render_yolo(images, labels, suffix, classes=None, output=None):
     if not isinstance(images, list):
