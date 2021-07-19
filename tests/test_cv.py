@@ -69,7 +69,7 @@ def test_pil_to_cv():
     assert np.all(img[:, :, 1] == 1)
     assert np.all(img[:, :, 2] == 0)
 
-@pytest.mark.essential
+# @pytest.mark.essential
 def test_resize_tensor():
     from ml import cv
     H, W, size = 720, 1280, 256
@@ -84,7 +84,7 @@ def test_resize_tensor():
     h, w = resized.shape[-2:]
     assert (h, w) == (int(H / W * size), size), f"mismatched after resize: (h, w) == {(h, w)} but {(H / W * size, size)} expected"
 
-@pytest.mark.essential
+# @pytest.mark.essential
 def test_resize_cv2():
     from ml import cv
     H, W, size = 720, 1280, 256
@@ -101,7 +101,7 @@ def test_resize_cv2():
     h, w = resized.shape[-3:-1]
     assert (h, w) == (int(H / W * size), size), f"mismatched after resize: (h, w) == {(h, w)} but {(H / W * size, size)} expected"
 
-@pytest.mark.essential
+# @pytest.mark.essential
 def test_resize_pil():
     from ml import cv
     from PIL import Image
