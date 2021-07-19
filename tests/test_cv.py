@@ -2,8 +2,6 @@ from pathlib import Path
 import pytest
 import torch as th
 
-from ml import cv
-
 SKU110K = dict(
     images=[
         '../../datasets/SKU110K/images/train_0.jpg',
@@ -69,7 +67,7 @@ def test_pil_to_cv():
     assert np.all(img[:, :, 1] == 1)
     assert np.all(img[:, :, 2] == 0)
 
-@pytest.mark.essential
+# @pytest.mark.essential
 def test_resize_tensor():
     from ml import cv
     H, W, size = 720, 1280, 256
@@ -84,7 +82,7 @@ def test_resize_tensor():
     h, w = resized.shape[-2:]
     assert (h, w) == (int(H / W * size), size), f"mismatched after resize: (h, w) == {(h, w)} but {(H / W * size, size)} expected"
 
-@pytest.mark.essential
+# @pytest.mark.essential
 def test_resize_cv2():
     from ml import cv
     H, W, size = 720, 1280, 256
@@ -101,7 +99,7 @@ def test_resize_cv2():
     h, w = resized.shape[-3:-1]
     assert (h, w) == (int(H / W * size), size), f"mismatched after resize: (h, w) == {(h, w)} but {(H / W * size, size)} expected"
 
-@pytest.mark.essential
+# @pytest.mark.essential
 def test_resize_pil():
     from ml import cv
     from PIL import Image
@@ -120,7 +118,6 @@ def test_resize_pil():
     resized = cv.resize(img, 256, constraint='longer')
     w, h = resized.size
     assert (h, w) == (int(H / W * size), size), f"mismatched after resize: (h, w) == {(h, w)} but {(H / W * size, size)} expected"
-
 
 def test_render_yolo(images, labels, suffix, classes=None, output=None):
     if not isinstance(images, list):

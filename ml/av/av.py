@@ -1,8 +1,7 @@
 '''Built on top of pyAV.
 '''
 
-from av import *
-from ml import cv
+from ml import sys
 from ml import logging
 
 '''CODECS available in pyAV/FFMPEG
@@ -43,13 +42,19 @@ def resolution_str(*res):
 def fourcc(fmt):
     if len(fmt) != 4:
         raise ValueError(f"Expected four CC but got {fmt} of {len(fmt)} CC")
-    return cv.VideoWriter_fourcc(*fmt)    
-
+    
+    if sys.byteorder == 'little':
+        ch0, ch1, ch2, ch3 = map(ord, fmt)
+    else:
+        ch3, ch2, ch1, ch0 = map(ord, fmt)
+    return ch3 << 24 | ch2 << 16 | ch1 << 8 | ch0
 
 def fourcc_str(cc):
     cc = int(cc)
-    return "".join([chr((cc >> 8 * i) & 0xFF) for i in range(4)])
-
+    if sys.byteorder == 'little':
+        return "".join([chr((cc >> 8 * i) & 0xFF) for i in range(4)])
+    else:
+        return "".join([chr((cc >> 8 * i) & 0xFF) for i in reversed(range(4))])
 
 CODECS = dict(
     pcm_alaw=fourcc('ALAW'),

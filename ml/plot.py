@@ -40,7 +40,6 @@ def show(fig):
         plt.figure(figure.number)
 
 def numpy(fig, dpi=None):
-    from ml import cv
     bio = io.BytesIO()
     fig.savefig(bio, format='raw', dpi=dpi or fig.dpi)
     bio.seek(0)
