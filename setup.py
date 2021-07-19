@@ -17,7 +17,6 @@ import torch
 from torch.utils.cpp_extension import CppExtension, CUDAExtension, CUDA_HOME
 
 from ml.shutil import run as sh
-from ml import logging
 
 named_arches = OrderedDict([
     ('Kepler+Tesla', '3.7'),
@@ -57,7 +56,7 @@ def write_version_py(path, major=None, minor=None, patch=None, suffix='', sha='U
     if major is None or minor is None or patch is None:
         major, minor, patch = sh("git describe --abbrev=0 --tags")[1:].split('.')
         sha = sh("git rev-parse HEAD")
-        logging.info(f"Build version {major}.{minor}.{patch}-{sha}")
+        print(f"Build version {major}.{minor}.{patch}-{sha}")
 
     path = Path(path).resolve()
     pkg = path.name
