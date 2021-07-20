@@ -160,11 +160,13 @@ def torch2trt(module,
                 outputs = (outputs,)
             ctx.mark_outputs(outputs, output_names)
 
-    builder.max_workspace_size = max_workspace_size
     builder.max_batch_size = max_batch_size
-    builder.fp16_mode = fp16_mode
-    builder.int8_mode = int8_mode
-    builder.strict_type_constraints = strict_type_constraints
+    """ Removed in tensorrt > 8.0"""
+    #builder.max_workspace_size = max_workspace_size
+    #builder.fp16_mode = fp16_mode
+    #builder.int8_mode = int8_mode
+    #builder.strict_type_constraints = strict_type_constraints
+    """"""""""""""""""""""""""""""""
     if dynamic_axes is None:
         for i in range(network.num_inputs):
             logging.info(f"network.get_input({i}).shape={network.get_input(i).shape}")
