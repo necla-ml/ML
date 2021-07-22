@@ -1,5 +1,6 @@
 '''Built on top of pyAV.
 '''
+from enum import Enum
 
 from ml import sys
 from ml import logging
@@ -12,6 +13,14 @@ amr: ['amrnb', 'amrwb']
 aac: ['aac_latm', 'aac', 'aac_at', 'aac_fixed']
 vcodecs: ['mjpeg', 'mpeg4', 'h264', 'libx264', 'libopenh264', 'hevc']
 '''
+
+class VIDEO_IO_FLAGS(Enum):
+    CAP_PROP_POS_MSEC=0
+    CAP_PROP_FPS=1
+    CAP_PROP_FRAME_HEIGHT=2
+    CAP_PROP_FRAME_WIDTH=3
+    CAP_PROP_FOURCC=4
+    CAP_PROP_BUFFERSIZE=5
 
 RESOLUTIONS = {
     'D1_NTSC': (704, 480),

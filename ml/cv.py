@@ -5,7 +5,6 @@ import math
 import random
 from typing import *
 from pathlib import Path
-from colorsys import rgb_to_hsv
 
 import numpy as np
 import torch as th
@@ -74,68 +73,6 @@ torch RGB: float in CHW tensor
 '''
 
 # Essential OpenCV
-
-BLACK    = (  0,   0,   0)
-BLUE     = (255,   0,   0)
-GREEN    = (  0, 255,   0)
-RED      = (  0,   0, 255)
-MAROON   = (  0,   0, 128)
-YELLOW   = (  0, 255, 255)
-WHITE    = (255, 255, 255)
-FG       = GREEN
-BG       = BLACK
-COLORS91 = [[random.randint(0, 255) for _ in range(3)] for _ in range(91)]
-
-PALETTE_RGB = [
-(204,73,196),
-(100,205,76),
-(107,60,194),
-(196,221,63),
-(111,115,206),
-(203,171,58),
-(61,38,94),
-(180,211,121),
-(214,69,116),
-(101,211,154),
-(209,69,48),
-(105,190,189),
-(215,128,63),
-(85,119,152),
-(192,166,116),
-(139,62,116),
-(82,117,57),
-(213,137,206),
-(54,60,54),
-(205,215,188),
-(106,39,44),
-(174,178,219),
-(131,89,48),
-(197,134,139)]
-
-from random import shuffle
-shuffle(PALETTE_RGB)
-PALETTE_RGB = [tuple([c / 255 for c in C]) for C in PALETTE_RGB]
-PALETTE_HSV = [rgb_to_hsv(*c) for c in PALETTE_RGB]
-
-def rgb(i, integral=False):
-    if integral:
-        return tuple(map(lambda v: int(255 * v), PALETTE_RGB[i % len(PALETTE_RGB)]))
-    else:
-        return PALETTE_RGB[i % len(PALETTE_RGB)]
-
-def hsv(i, s=1, v=1):
-    return PALETTE_HSV[i % len(PALETTE_HSV)]
-
-def pts(pts):
-    r"""
-    Args:
-        pts list of x and y or (x, y) tuples
-    """
-    if type(pts[0]) is int:
-        pts = [[[pts[2*i], pts[2*i+1]]]for i in range(len(pts) // 2)]
-    elif type(pts[0]) is tuple:
-        pts = [[list(p)] for p in pts]
-    return np.array(pts)
 
 def isTorch(img):
     return th.is_tensor(img) and img.ndimension() == 3
