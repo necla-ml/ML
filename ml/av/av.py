@@ -5,6 +5,8 @@ from enum import Enum
 from ml import sys
 from ml import logging
 
+from .backend.pyav import *
+
 '''CODECS available in pyAV/FFMPEG
 g711: ['pcm_alaw', 'pcm_mulaw']
 g722: ['g722']
