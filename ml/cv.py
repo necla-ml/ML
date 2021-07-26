@@ -14,8 +14,6 @@ try:
 except Exception as e:
     accimage = None
 
-from ml.av.backend import opencv as cv2
-
 py_min, py_max = min, max
 irange = range
 from ml.av.backend import opencv as cv2
@@ -222,7 +220,7 @@ def toTorch(src, device='cpu'):
     t = th.from_numpy(src / 255).to(device)
     return t
 
-def resize(img, size, constraint='shorter', interpolation=INTER_LINEAR, **kwargs):
+def resize(img, size, constraint='shorter', interpolation=cv2.INTER_LINEAR, **kwargs):
     '''Resize input image of PIL/accimage, OpenCV BGR or torch tensor.
 
     Args:
