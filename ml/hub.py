@@ -2,6 +2,7 @@ from pathlib import Path
 from time import time
 from torch.hub import *
 from ml import logging
+import torch as th
 
 '''
 ENV_ML_HOME = 'ML_HOME'
@@ -16,6 +17,9 @@ SPECS = dict(
     s3='s3://',
     github='https://github.com/'
 )
+
+# FIXME: rate limit exceeded in 1.9.0 (https://github.com/pytorch/vision/issues/4156#issuecomment-886005117)
+th.hub._validate_not_a_forked_repo=lambda a,b,c: True
 
 def parse(url):
     spec = urlparse(url)
