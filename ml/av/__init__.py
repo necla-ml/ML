@@ -8,9 +8,12 @@ NOTE:
 
 from . import io
 from . import transforms
+from . import av as _av
 
 from .av import *
-del utils
+if hasattr(_av, 'utils'):
+    print('del utils')
+    del utils
 
 from .h264 import *
 from . import utils
