@@ -9,6 +9,8 @@ NOTE:
 from . import io
 from . import transforms
 
-from .utils import *
 from .av import *
+del utils
+
 from .h264 import *
+from . import utils
