@@ -1,15 +1,11 @@
 import os
 from uuid import uuid4
 
-import numpy as np
 from PIL import Image
 import torch
 import tensorrt as trt
 
 from ml import logging
-
-from ml import hub
-from ml import deploy as deployer
 
 logging.Logger(name='Calibrator').setLevel('INFO')
 
@@ -29,12 +25,13 @@ def preprocessor(size=256, crop=224, mean=[0.485, 0.456, 0.406], std=[0.229, 0.2
     elif isinstance(crop, Iterable):
         W, H = crop * 2 if len(crop) == 1 else crop
 
-    def preprocess(image, *shape):
+    def preprocess(image_path, *shape):
         r'''Preprocessing for TensorRT calibration
         Args:
-            image(PIL.JpegImageFile): in RGB HWC
+            image_path(str): path to image
             channels(int):
         '''
+        image = Image.open(image_path)
         logging.debug(f"image.size={image.size}, mode={image.mode}")
         image = image.convert('RGB')
         C = len(image.mode)
@@ -104,9 +101,9 @@ class Calibrator(trt.IInt8EntropyCalibrator2):
             # Populates a persistent buffer with images.
             for index in range(0, len(self.files), self.batch_size):
                 for offset in range(self.batch_size):
-                    image = Image.open(self.files[index + offset])
+                    image_path = self.files[index + offset]
                     for i, input_shape in enumerate(self.inputs):
-                        self.buffers[i][offset] = self.preprocess_func(image).contiguous()
+                        self.buffers[i][offset] = self.preprocess_func(image_path).contiguous()
                 logging.info(f"preprocessed calibration images: {index + self.batch_size}/{len(self.files)}")
                 yield
         else:

@@ -162,7 +162,7 @@ def build(name, model, spec, model_dir=None, backend='trt', reload=False, **kwar
                                              output_names=output_names)
         else:
             batch_size = kwargs.pop('batch_size', 1)
-            workspace_size = kwargs.pop('workspace_size', GiB(1))
+            workspace_size = kwargs.pop('workspace_size', GiB(2))
             fp16 = kwargs.pop('amp', False)
             fp16 = fp16 or kwargs.pop('fp16', False)
             int8 = kwargs.pop('int8', False)
