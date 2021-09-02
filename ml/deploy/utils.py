@@ -48,14 +48,14 @@ def get_input_output_names(engine):
         # name or index
         if isinstance(idx_or_name, string_types):
             name = idx_or_name
-            index  = engine.get_binding_index(self.name)
+            index  = engine.get_binding_index(name)
             if index == -1:
-                raise IndexError("Binding name not found: %s" % self.name)
+                raise IndexError("Binding name not found: %s" % name)
         else:
             index = idx_or_name
             name  = engine.get_binding_name(index)
             if name is None:
-                raise IndexError("Binding index out of range: %i" % self.index)
+                raise IndexError("Binding index out of range: %i" % index)
 
         if engine.binding_is_input(index):
             input_names.append(name)
