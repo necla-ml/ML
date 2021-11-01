@@ -140,6 +140,7 @@ def build(name, model, spec, model_dir=None, backend='trt', reload=False, **kwar
         # XXX No intermmediate ONNX archive
         from . import trt as backend
         chkpt_path = Path(f"{model_dir}/{name}.pth")
+        
         if chkpt_path.exists() and not reload:
             logging.info(f"Loading torch2trt checkpoint from {chkpt_path}")
             chkpt = th.load(chkpt_path)

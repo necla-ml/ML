@@ -10,6 +10,8 @@ except ImportError as e:
     raise ImportError(e, f"torch2trt required: `pip install --install-option='--plugins' git+https://github.com/NVIDIA-AI-IOT/torch2trt.git@b0cc8e77a0fbd61e96b971a66bbc11326f77c6b5`")
 
 EXPLICIT_BATCH = 1 << (int)(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH)
+# load all custom plugins
+trt.init_libnvinfer_plugins(None,'')
 
 class TRTPredictor(t2t.TRTModule):
     def __init__(self, engine=None, input_names=None, output_names=None):
@@ -101,7 +103,6 @@ def torch2trt(module,
     """
 
     # copy inputs to avoid modifications to source data
-    inputs_in = inputs
     inputs = [tensor.clone()[0:1] for tensor in inputs]  # only run single entry
 
     logger = trt.Logger(log_level)
@@ -138,13 +139,14 @@ def torch2trt(module,
     dynamic_axes = kwargs.pop('dynamic_axes', None)
     if dynamic_axes is None and max_batch_size > 1:
         dynamic_axes = {input_name: {0: 'batch_size'} for input_name in input_names}
+    
     if use_onnx:
         f = io.BytesIO()
         th.onnx.export(module, inputs, f,
                        input_names=input_names,
                        output_names=output_names,
                        dynamic_axes=dynamic_axes,
-                       opset_version=kwargs.pop('opset_version', 11))
+                       opset_version=kwargs.pop('opset_version', 13))
         f.seek(0)
         onnx_bytes = f.read()
         network = builder.create_network(1 << int(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH))
