@@ -44,13 +44,31 @@ def slurm_sbatch(cfg, **kwargs):
         str(script),
     ] + sys.argv[1:]
     cmd = ' '.join(cmd)
-    job = f"""#!/bin/sh
 
+    if cfg.slurm_nodelist:
+        job = f"""#!/bin/sh
 #SBATCH --job-name={kwargs.get('name', script.name)}
 #SBATCH --partition={cfg.slurm_partition}
 #SBATCH --gres=gpu:{0 if cfg.no_gpu else cfg.slurm_ntasks_per_node}       
-#SBATCH --ntasks-per-node={cfg.slurm_ntasks_per_node}
+#SBATCH --nodelist={cfg.slurm_nodelist}                            
 #SBATCH --ntasks={ntasks}                            
+#SBATCH --ntasks-per-node={cfg.slurm_ntasks_per_node}
+#SBATCH --cpus-per-task={cfg.slurm_cpus_per_task}
+#SBATCH --mem={cfg.slurm_mem}
+#SBATCH --time={cfg.slurm_time}
+#SBATCH --export=ALL,PYTHONPATH=.
+##SBATCH --output=/dev/null
+#SBATCH --open-mode=append
+{cfg.slurm_constraint and f'#SBATCH -C {cfg.slurm_constraint}' or ''}
+
+{cmd}"""
+    else:
+        job = f"""#!/bin/sh
+#SBATCH --job-name={kwargs.get('name', script.name)}
+#SBATCH --partition={cfg.slurm_partition}
+#SBATCH --gres=gpu:{0 if cfg.no_gpu else cfg.slurm_ntasks_per_node}       
+#SBATCH --ntasks={ntasks}                            
+#SBATCH --ntasks-per-node={cfg.slurm_ntasks_per_node}
 #SBATCH --cpus-per-task={cfg.slurm_cpus_per_task}
 #SBATCH --mem={cfg.slurm_mem}
 #SBATCH --time={cfg.slurm_time}

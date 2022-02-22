@@ -80,6 +80,7 @@ class ArgumentParser(argparse.ArgumentParser):
         self.add_argument('--rank', default=-1, type=int,                                                       help='Node rank for distributed training')
         
         self.add_argument('--slurm-partition', default='gpu',                                                   help='Slurm job partition to submit to')
+        self.add_argument('--slurm-nodelist', default=None,                                                     help='List of candidate hosts')
         self.add_argument('--slurm-nodes', default=1, type=int,                                                 help='Number of worker nodes to launch job')
         self.add_argument('--slurm-ntasks-per-node', default=1, type=int,                                       help='Number of GPU procs to launch per node')
         self.add_argument('--slurm-cpus-per-task', default=4, type=int,                                         help='Number of CPUs per proc')
