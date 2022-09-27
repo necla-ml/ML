@@ -101,7 +101,6 @@ def torch2trt(module,
         int8_calib_preprocess_func(input):
         opset_version(int):
     """
-
     # copy inputs to avoid modifications to source data
     inputs = [tensor.clone()[0:1] for tensor in inputs]  # only run single entry
 
@@ -149,6 +148,28 @@ def torch2trt(module,
                        opset_version=kwargs.pop('opset_version', 13))
         f.seek(0)
         onnx_bytes = f.read()
+
+        # simplify onnx graph using onnxsim if specified
+        onnx_simplify = kwargs.pop('onnx_simplify', False)
+        if onnx_simplify:
+            try:
+                import onnx 
+                import onnxsim
+                f.seek(0)
+                onnx_model = onnx.load(f)  # load onnx model
+                logging.info('[onnxsim] Starting to simplify ONNX...')
+                onnx_model, check = onnxsim.simplify(onnx_model)
+                assert check, '[onnxsim] simplify check failed'
+            except Exception as e:
+                logging.error(f'[onnxsim] Simplifier failure: {e}')
+            else:
+                f = io.BytesIO()
+                onnx.save(onnx_model, f)
+                f.seek(0)
+                onnx_bytes = f.read()
+                logging.info('[onnxsim] Successfully simplified onnx model')
+        
+        # tensorrt network by parsing onnx graph
         network = builder.create_network(1 << int(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH))
         parser = trt.OnnxParser(network, logger)
         parser.parse(onnx_bytes)
@@ -163,12 +184,6 @@ def torch2trt(module,
             ctx.mark_outputs(outputs, output_names)
 
     builder.max_batch_size = max_batch_size
-    """ Removed in tensorrt > 8.0"""
-    #builder.max_workspace_size = max_workspace_size
-    #builder.fp16_mode = fp16_mode
-    #builder.int8_mode = int8_mode
-    #builder.strict_type_constraints = strict_type_constraints
-    """"""""""""""""""""""""""""""""
     if dynamic_axes is None:
         for i in range(network.num_inputs):
             logging.info(f"network.get_input({i}).shape={network.get_input(i).shape}")
