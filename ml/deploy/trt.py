@@ -160,6 +160,8 @@ def torch2trt(module,
                 logging.info('[onnxsim] Starting to simplify ONNX...')
                 onnx_model, check = onnxsim.simplify(onnx_model)
                 assert check, '[onnxsim] simplify check failed'
+            except ImportError as e:
+                raise ImportError(e, f"onnx and onnxsim required: install using `pip install onnx onnx-simplifier`")
             except Exception as e:
                 logging.error(f'[onnxsim] Simplifier failure: {e}')
             else:
