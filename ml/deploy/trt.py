@@ -1,6 +1,8 @@
+import io
 import numpy as np
 import torch as th
-from ml import io, logging
+from ml import logging
+
 from .utils import GiB, get_calibration_files
 
 try:
@@ -30,29 +32,29 @@ class TRTPredictor(t2t.TRTModule):
 
         for i, input_name in enumerate(self.input_names):
             # XXX Conclude dynamic input shape
-            idx = self.engine.get_binding_index(input_name)
-            binding_shape = tuple(self.context.get_binding_shape(idx))
+            idx = self.engine[input_name]
+            binding_shape = tuple(self.context.get_tensor_shape(input_name))
             arg_shape = tuple(inputs[i].shape)
             if binding_shape != arg_shape:
                 # logging.info(f"Reallocate {input_name}.shape{binding_shape} -> {arg_shape}")
-                self.context.set_binding_shape(idx, trt.Dims(arg_shape))
+                self.context.set_input_shape(input_name, trt.Dims(arg_shape))
             bindings[idx] = inputs[i].contiguous().data_ptr()
 
         # create output tensors
         outputs = [None] * len(self.output_names)
         if out is None:
             for i, output_name in enumerate(self.output_names):
-                idx = self.engine.get_binding_index(output_name)
-                dtype = t2t.torch_dtype_from_trt(self.engine.get_binding_dtype(idx))
-                shape = tuple(self.context.get_binding_shape(idx))
+                idx = self.engine[output_name]
+                dtype = t2t.torch_dtype_from_trt(self.engine.get_tensor_dtype(output_name))
+                shape = tuple(self.context.get_tensor_shape(output_name))
                 #assert shape[0] == batch_size
-                device = t2t.torch_device_from_trt(self.engine.get_location(idx))
+                device = t2t.torch_device_from_trt(self.engine.get_tensor_location(output_name))
                 output = th.empty(size=shape, dtype=dtype, device=device)
                 outputs[i] = output
                 bindings[idx] = output.data_ptr()
         else:
             for i, output_name in enumerate(self.output_names):
-                idx = self.engine.get_binding_index(output_name)
+                idx = self.engine[output_name]
                 outputs[i] = out[i]
                 bindings[idx] = out[i].data_ptr()
 

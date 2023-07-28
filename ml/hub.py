@@ -1,25 +1,25 @@
+import errno
+import os
+import sys
+import warnings
 from pathlib import Path
 from time import time
-from torch.hub import *
-from ml import logging
-import torch as th
+from urllib.parse import urlparse  # noqa: F401
 
-'''
-ENV_ML_HOME = 'ML_HOME'
-def _get_ml_home():
-    return os.path.expanduser(
-            os.getenv(ENV_ML_HOME,
-                      os.path.join(os.getenv(ENV_XDG_CACHE_HOME,
-                                             DEFAULT_CACHE_DIR), 'ml')))
-'''
+import torch
+from torch.hub import (
+    _get_cache_or_reload, 
+    get_dir, 
+    download_url_to_file, 
+    HASH_REGEX
+)
+
+from ml import logging
 
 SPECS = dict(
     s3='s3://',
     github='https://github.com/'
 )
-
-# FIXME: rate limit exceeded in 1.9.0 (https://github.com/pytorch/vision/issues/4156#issuecomment-886005117)
-th.hub._validate_not_a_forked_repo=lambda a,b,c: True
 
 def parse(url):
     spec = urlparse(url)
@@ -55,15 +55,7 @@ def github_release_url(owner, project, tag, name):
     return f"https://github.com/{owner}/{project}/releases/download/{tag}/{name}"
 
 def repo(github, force_reload=False, verbose=True):
-    # pytorch-1.6.0 applicable
-    from torch.hub import _get_cache_or_reload
-    import os
-    if True:
-        os.makedirs(get_dir(), exist_ok=True)
-    else:
-        hubdir = f"{_get_ml_home()}/hub"
-        os.makedirs(hubdir, exist_ok=True)
-        set_dir(hubdir)
+    os.makedirs(get_dir(), exist_ok=True)
     return _get_cache_or_reload(github, force_reload, verbose)
 
 def upload_s3(path, bucket, key):
@@ -236,10 +228,7 @@ def load_state_dict_from_url(url, model_dir=None, map_location=None, force_reloa
                 download_url_to_file(url, cached_file, hash_prefix, progress=progress)
         except Exception as e:
             raise IOError(f"Failed to download to {cached_file}: {e}")
-    '''
-    if _is_legacy_zip_format(cached_file):
-        return _legacy_zip_load(cached_file, model_dir, map_location)
-    '''
+
     logging.info(f'Loading checkpoint from {cached_file}')
     return torch.load(cached_file, map_location=map_location)
 
