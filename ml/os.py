@@ -1,4 +1,3 @@
-from os import *
 from pathlib import Path
 
 def path(filename, mkdir=False):
