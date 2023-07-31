@@ -1,8 +1,8 @@
+import io
 import itertools
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
-from ml import io
 matplotlib.use('Agg')
 
 plt.rcParams.update({'figure.max_open_warning': 2})

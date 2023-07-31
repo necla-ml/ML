@@ -1,7 +1,4 @@
-from shutil import *
-import shlex
 import subprocess
-
 
 def run(*args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='utf-8', exitcode=False, shell=True, check=False):
     if len(args) == 1:

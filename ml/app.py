@@ -1,4 +1,4 @@
-import os, sys
+import os, sys, random
 import subprocess
 from pathlib import Path
 
@@ -7,7 +7,6 @@ from ml import (
     cuda,
     distributed as dist,
     multiprocessing as mp,
-    random,
     utils,
     logging,)
 
