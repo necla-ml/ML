@@ -4,7 +4,6 @@ NOTE:
 - Dependencies on ml-vision or ml-audio are necessary but only on demand.
 """
 
-from . import io
 from . import transforms
 
 from .h264 import *

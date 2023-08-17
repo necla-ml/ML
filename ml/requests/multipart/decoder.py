@@ -1,9 +1,10 @@
+import io
 import requests, base64
 from requests import Request, Session
 from requests_toolbelt import MultipartDecoder
 from requests_toolbelt.multipart.decoder import *
 
-from ml import io, logging
+from ml import logging
 
 __all__ = [
     'HTTPError',            # HTTP related
