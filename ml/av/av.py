@@ -1,8 +1,8 @@
 '''Built on top of pyAV.
 '''
+import sys
 from enum import Enum
 
-from ml import sys
 from ml import logging
 
 from .backend.pyav import *
