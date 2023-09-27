@@ -8,7 +8,7 @@ Refer to the project wiki for setup, resources and hands-on tutorials.
 This repository contains foundation classes and utilities for ML applications.
 It is under development and subject to change and thus recommended to use this library as a git submodule.
 
-## Installation
+## Installation (x86)
 
 1. Install the latest [Miniconda](https://conda.io/en/latest/miniconda.html) on the official website
 2. Create a conda environment with python=3.7+
@@ -26,13 +26,15 @@ It is under development and subject to change and thus recommended to use this l
 4. Clone the repo and enter the directory
 
     ```
-    git clone --recursive https://gitlab.com/necla-ml/ml.git ML
+    #git clone --recursive https://gitlab.com/necla-ml/ml.git ML
+    git clone --recursive https://github.com/necla-ml/ML.git ML
     cd ML
     ```
 
 5. Add the dependency channels to `~/.condarc`
 
     ```
+    # following is missing.  Maybe adds necla-ml channel from github/gitlab/zdata?
     cat recipe/.condarc >> ~/.condarc
     ```
 
@@ -62,6 +64,16 @@ To contribute to this project, follow the development flow:
     git push       # Push to the dev branch on the repo
     make merge     # Merge back to the main branch and make a pull request afterwards
     ```
+
+## Installation (aarch64)
+- git checkout, branch 'orin' for devel work.
+- `make conda` to boot into pytorch-2.1 compatible python environment.
+- **NO** `make setup.py build`  (fixing errors)
+- `make dev-setup`              (local install)
+- `python test/imports_ok`      (identify various missing packages)
+- some things have more complicated builds required, and can be inspired by
+  the docker builds at https://github.com/dustynv/jetson-containers .
+  Also at /mnt/jetson/jetson-containers
 
 ## Conda Distribution
 

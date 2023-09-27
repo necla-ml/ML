@@ -7,14 +7,19 @@ import shutil
 import distutils.command.clean
 from pathlib import Path
 
+# deprecated, but ML directory layout departs from current recommendations
 from setuptools import setup, find_namespace_packages
-from pkg_resources import get_distribution, DistributionNotFound
+# N/A for aarch64:
+#from pkg_resources import get_distribution, DistributionNotFound
 
 from ml.shutil import run as sh
 
 cwd = Path(__file__).parent
 pkg = sh('basename -s .git `git config --get remote.origin.url`').lower()
 PKG = pkg.upper()
+
+import platform
+host_arch = platform.machine() # x86_64 or aarch64?
 
 def write_version_py(path, major=None, minor=None, patch=None, suffix='', sha='Unknown'):
     if major is None or minor is None or patch is None:
@@ -49,12 +54,23 @@ cuda = torch.version.cuda
     
     return version
 
+def write_test_ml_imports_py(packages):
+    import time
+    header = f"""# GENERATED TEST FILE
+# TIME: {time.asctime()}"
+"""
+    imports = '\n'.join([f"print('import {p} ...')\nimport {p}" for p in packages])
+    with open("./test_ml_imports.py", "w") as f:
+        f.write(header)
+        f.write(imports)
 
-def dist_info(pkgname):
-    try:
-        return get_distribution(pkgname)
-    except DistributionNotFound:
-        return None
+    return None
+
+#def dist_info(pkgname):
+#    try:
+#        return get_distribution(pkgname)
+#    except DistributionNotFound:
+#        return None
 
 
 # TODO
@@ -90,13 +106,48 @@ def readme():
     return content
 
 
+#import packaging.version
+#torch_ver = packaging.version.parse(torch.__version__)
+
 if __name__ == '__main__':
     version = write_version_py(pkg)
-    requirements = [
-        'torch',
-    ]
+    if host_arch == 'aarch64':
+        # The makefile pre-installs and pins the pytorch version for JetPack
+        requirements = [
+                # for JetPack 5.1.2, pytorch 2.1.0_cp38; or pytorch 2.0.0_cp39
+                # prebuilt wheels as per https://forums.developer.nvidia.com
+                #    Following suggestion had syntax error:
+                #pip @ file:///mnt/jetson/torch-2.1.0a0+41361538.nv23.06-cp38-cp38-linux_aarch64.whl
+                'torch>=2.0'
+                ]
+    else:
+        requirements = [
+                'torch',
+                'numexpr',
+                'pyyaml',
+                'requests',
+                'requests-toolbelt',
+                'av',
+                ]
+
     namespaces = ['ml']
+    # following is DEPRECATED:
     packages = find_namespace_packages(include=['ml.*'], exclude=('ml.csrc', 'ml.csrc.*'))
+    unsupported = []
+    if host_arch == 'aarch64': # and torch_ver >= packaging.version.parse("2.0"):
+        # ml.tasks is based upon pytorch/ignite, which may have issues with 2.0+
+        unsupported.append('ml.tasks')
+        unsupported.append('ml.tasks.detection') # requires pytorch/ignite, which may have issues wtih 2.0+
+        unsupported.append('ml.tasks.grounding') # requires pytorch/ignite, which may have issues wtih 2.0+
+        unsupported.append('ml.tasks.detection.coco') # requires pytorch/ignite, which may have issues wtih 2.0+
+        # ml.av also failed to 'import' ??
+
+    packages = [p for p in packages if p not in unsupported]
+
+    packages = namespaces + packages 
+    print("setup.py packages: ",packages)
+    write_test_ml_imports_py(packages)
+
     setup(
         name=pkg.upper(),
         version=version,
